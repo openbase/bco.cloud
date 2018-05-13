@@ -6,11 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="bco.cloud" />
+        <module name="bco.cloud.connector" />
+        <module name="bco.cloud.server" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="bco.cloud" target="1.8" />
+      <module name="bco.cloud.connector" target="1.8" />
+      <module name="bco.cloud.server" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>
