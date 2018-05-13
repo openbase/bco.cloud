@@ -8,6 +8,7 @@
         </element>
         <element id="directory" name="lib">
           <element id="library" level="project" name="Maven: com.google.appengine:appengine-api-1.0-sdk:1.9.63" />
+          <element id="library" level="project" name="Maven: commons-codec:commons-codec:1.10" />
           <element id="library" level="project" name="Maven: jstl:jstl:1.2" />
           <element id="library" level="project" name="Maven: org.openbase.bco:authentication.lib:1.6-SNAPSHOT" />
           <element id="library" level="project" name="Maven: org.openbase:jul.extension.rsb.scope:1.6-SNAPSHOT" />

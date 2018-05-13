@@ -1,9 +1,9 @@
 package org.openbase.bco.cloud;
 
-import com.google.appengine.repackaged.com.google.api.client.util.Base64;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
+import org.apache.commons.codec.binary.Base64;
 import org.openbase.bco.authentication.lib.EncryptionHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +16,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Enumeration;
 
 @WebServlet(name = "AuthenticationServlet", value = "/auth")
 public class AuthenticationServlet extends HttpServlet {
@@ -43,21 +42,17 @@ public class AuthenticationServlet extends HttpServlet {
 
     private static final byte[] ENCRYPTION_KEY = EncryptionHelper.generateKey();
 
+    // Test links:
     // http://localhost:8080/auth?client_id=google&redirect_uri=https://oauth-redirect.googleusercontent.com/r/testsmarthome-6203c&state=STATE_STRING&response_type=token
     // http://xenon-blade-203010.appspot.com/auth?client_id=google&redirect_uri=https://oauth-redirect.googleusercontent.com/r/testsmarthome-6203c&state=STATE_STRING&response_type=token
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        logger.info("Call to authentication!");
         HttpSession session = req.getSession();
-        log("THIS IS JUST A TEST");
-
-
-        for(Enumeration<String> attributeName = session.getAttributeNames(); attributeName.hasMoreElements();) {
-            System.out.println(attributeName.nextElement());
-        }
 
         if (session.isNew()) {
-            logger.info("New session");
+            logger.info("New session for authentication");
 
             final String clientID = req.getParameter(CLIENT_ID_KEY);
             final String state = req.getParameter(STATE_KEY);
@@ -90,15 +85,13 @@ public class AuthenticationServlet extends HttpServlet {
             session.setAttribute(CLIENT_ID, clientID);
             session.setAttribute(LoginValidationServlet.REDIRECT_KEY, "/auth");
 
-            resp.sendRedirect("/login.jsp");
+            resp.sendRedirect("/login");
         } else {
             logger.info("Old session");
 
             final String username = (String) session.getAttribute(LoginValidationServlet.USERNAME_KEY);
             final String clientID = (String) session.getAttribute(CLIENT_ID);
             String redirectURI = (String) session.getAttribute(REDIRECT_URI_KEY);
-
-            logger.info("Username: " + username + ", clientId: " + clientID + ", redirectURI: " + redirectURI);
 
             if(username == null) {
                 resp.sendError(400, "Username not available");
@@ -118,8 +111,8 @@ public class AuthenticationServlet extends HttpServlet {
             String accessToken = generateAccessToken(clientID, username, ENCRYPTION_KEY);
             redirectURI += PARAMETER_SEPARATOR + ACCESS_TOKEN_KEY + PARAMETER_ASSIGNMENT + accessToken;
 
-            log("Redirect to: " + redirectURI);
-//            resp.sendRedirect(redirectURI);
+            logger.info("Redirect to: " + redirectURI);
+            resp.sendRedirect(redirectURI);
         }
     }
 
