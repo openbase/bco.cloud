@@ -178,3 +178,8 @@ gen-external-apklibs
 ### Vim temporary files ###
 *.swp
 
+# npm files and dirs:
+npm-debug.log*
+node_modules/
+package-lock.json
+.npm
