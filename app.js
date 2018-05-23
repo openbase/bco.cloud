@@ -9,7 +9,7 @@ app.get('/', function (req, res) {
 
 const pwd = "123456";
 
-io.on('connection', function (socket) {
+/*io.on('connection', function (socket) {
     console.log('a user connected with id: ' + socket.id);
 
     // initialize a timeout of 3 seconds to close the socket connection if no authentication has been performed
@@ -30,7 +30,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('disconnect', () => console.log('socket[' + socket.id + '] disconnected'));
-});
+});*/
 
 http.listen(PORT, function () {
     console.log('listening on: ' + PORT);
