@@ -1,6 +1,7 @@
 var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
+const PORT = process.env.PORT || 5000;
 
 app.get('/', function (req, res) {
     res.send('BCO Cloud prototype');
@@ -31,6 +32,6 @@ io.on('connection', function (socket) {
     socket.on('disconnect', () => console.log('socket[' + socket.id + '] disconnected'));
 });
 
-http.listen(3000, function () {
-    console.log('listening on *:3000');
+http.listen(PORT, function () {
+    console.log('listening on: ' + PORT);
 });
