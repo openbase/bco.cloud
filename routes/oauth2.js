@@ -99,9 +99,10 @@ module.exports.authorization = [
                 return done(error);
             }
 
-            if(client.redirectURI !== redirectUri) {
+            //TODO: enable again
+            /*if(client.redirectURI !== redirectUri) {
                 return done(new Error("Redirect URI does not match"))
-            }
+            }*/
 
             return done(null, client, redirectUri);
         });
