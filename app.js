@@ -5,46 +5,24 @@ const socketIO = require('socket.io'); // web socket communication
 const bodyParser = require('body-parser'); // plugin for express to parse user input into body object
 const cookieParser = require('cookie-parser'); // plugin for express to retrieve cookies
 const passport = require('passport'); // plugin handling login
-const passportLocal = require('passport-local'); // plugin for passport to handle login via html form
 const expressSession = require('express-session');
 const connectEnsureLogin = require('connect-ensure-login'); // plugin which tests if logged in and if not sends to a login page
+//TODO: this should only be used in development
+const errorHandler = require('errorhandler');
+const routes = require('./routes/oauth2');
 
-const users = require('./db/users'); // import user database
+// passport configuration
+require('./auth');
 
 const app = express(); // create an express app
 const server = http.Server(app); // add it is the http server
 const io = socketIO(server); // also add web socket to the http server
 
-passport.use(new passportLocal.Strategy({}, function (username, password, callback) {
-    users.findUser(username, function (error, user) {
-        if (error) {
-            return callback(error);
-        }
-
-        if (user.password === password) {
-            return callback(null, user);
-        } else {
-            return callback(null, false);
-        }
-    });
-}));
-
-passport.serializeUser(function (user, callback) {
-    callback(null, user.username);
-});
-
-passport.deserializeUser(function (username, callback) {
-    users.findUser(username, function (error, user) {
-        if (error) {
-            return callback(error);
-        } else {
-            callback(null, user);
-        }
-    })
-});
-
 // read port from Heroku env or use 5000 as default
 const PORT = process.env.PORT || 5000;
+
+const SESSION_SECRET = process.env.SESSION_SECRET || 'sessionSecret';
+const SOCKET_PWD = process.env.SOCKET_PWD || 'socketPassword';
 
 // create a parser for information given via URL
 // the extended flag says which library is used, false means a simpler version
@@ -52,7 +30,11 @@ const urlencodedParser = bodyParser.urlencoded({extended: false});
 
 // use cookie parser no matter which http request or which path
 app.use(cookieParser());
-app.use(expressSession({secret: 'thisIsASecret', resave: false, saveUninitialized: false}));
+app.use(bodyParser.json({extended: false}));
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(errorHandler());
+//TODO: the secret has to be read from a config file which is not accessible via git, e.g. heroku env
+app.use(expressSession({secret: SESSION_SECRET, resave: false, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -62,8 +44,7 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 // tell the server what to do on an http get request on '/'
-app.get('/', function (req, res) {
-    connectEnsureLogin.ensureLoggedIn('/login');
+app.get('/', connectEnsureLogin.ensureLoggedIn('/login'), function (req, res) {
     // just send a string which will be displayed in the browser
     res.send('BCO Cloud prototype');
 });
@@ -75,19 +56,46 @@ app.get('/login', function (req, res) {
 });
 
 // tell the server what to do on an http post request on '/login'
-app.post('/login', urlencodedParser, passport.authenticate('local', {failureRedirect: '/login'}), function (req, res) {
-    res.redirect('/');
-});
+app.post('/login', urlencodedParser, passport.authenticate('local', {
+    successReturnToOrRedirect: '/',
+    failureRedirect: '/login'
+}));
 
-// set a password for socket communication
-const pwd = "ThisIsJustAPrototype";
+// http://localhost:5000/dialog/authorization?client_id=google&redirect_uri=http://localhost:5000&state=state&scope=REQUESTED_SCOPES&response_type=code
+app.get('/dialog/authorization', routes.authorization);
+app.post('/dialog/authorization/decision', routes.decision);
+app.post('/oauth/token', routes.token);
+
+app.get('/fulfillment',
+    passport.authenticate('bearer', {session: false}),
+    function(request, response) {
+        console.log(JSON.stringify(request.body));
+        console.log(JSON.stringify(request.params));
+
+        //TODO: access token should be accessible by request.params and used to find the correct socket
+
+        onlySocket.send(JSON.stringify(request.body), (data) => {
+            response.json(data);
+        })
+    }
+);
+
+
+let onlySocket;
 
 // tell socket what to do when a connection from a client is initialized
 io.on('connection', function (socket) {
     console.log('a user connected with id: ' + socket.id);
 
+    if(onlySocket) {
+        // for dev purposes only support one socket connection
+        socket.disconnect(true);
+    }
+
     // initialize a timeout of 3 seconds to close the socket connection if no authentication has been performed
     let authenticationTimeout = setTimeout(() => socket.disconnect(true), 3000);
+
+    onlySocket = socket;
 
     // tell socket what to do if an event with the name authenticate is send
     socket.on('authenticate', function (data) {
@@ -96,7 +104,7 @@ io.on('connection', function (socket) {
         // the last argument is a callback which can be used to give feedback to the client
         let callback = arguments[arguments.length - 1];
         // test if the data send matches the password
-        if (data === pwd) {
+        if (data === SOCKET_PWD) {
             // clear the time out
             clearTimeout(authenticationTimeout);
             // inform client that authentication was a success
@@ -112,11 +120,20 @@ io.on('connection', function (socket) {
     });
 
     // tell socket what to do on disconnection, just log who disconnected
-    socket.on('disconnect', () => console.log('socket[' + socket.id + '] disconnected'));
+    socket.on('disconnect', () => {
+        console.log('socket[' + socket.id + '] disconnected')
+        onlySocket = undefined;
+    });
 });
 
 // start the server and tell it to listen on the given port
 server.listen(PORT, function () {
     // this function is called when the server is started
     console.log('listening on: ' + PORT);
+
+    let name = 'Tamino';
+    let token = require('./utils').generateKey();
+    let obj = {name, token};
+    console.log(JSON.stringify(obj));
+
 });

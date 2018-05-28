@@ -1,13 +1,12 @@
 const users = [
-    {username: 'bcouser', password: 'passwordbco'}
+    {username: 'bco', password: 'pwd'}
 ];
 
-exports.findUser = function (username, callback) {
-    process.nextTick(() => {
-        if (username === users[0].username) {
-            callback(null, users[0]);
-        } else {
-            callback(new Error('User[' + username + '] does not exist!'));
+module.exports.findByUsername = function (username, done) {
+    for (let i = 0; i < users.length; i++) {
+        if (users[i].username === username) {
+            return done(null, users[i]);
         }
-    });
+        return done(new Error("User not found"));
+    }
 };
