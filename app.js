@@ -6,7 +6,6 @@ const bodyParser = require('body-parser'); // plugin for express to parse user i
 const cookieParser = require('cookie-parser'); // plugin for express to retrieve cookies
 const passport = require('passport'); // plugin handling login
 const expressSession = require('express-session');
-const connectEnsureLogin = require('connect-ensure-login'); // plugin which tests if logged in and if not sends to a login page
 //TODO: this should only be used in development
 const errorHandler = require('errorhandler');
 const routes = require('./routes/oauth2');
@@ -33,7 +32,6 @@ app.use(cookieParser());
 app.use(bodyParser.json({extended: false}));
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(errorHandler());
-//TODO: the secret has to be read from a config file which is not accessible via git, e.g. heroku env
 app.use(expressSession({secret: SESSION_SECRET, resave: false, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -44,7 +42,7 @@ app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 
 // tell the server what to do on an http get request on '/'
-app.get('/', connectEnsureLogin.ensureLoggedIn('/login'), function (req, res) {
+app.get('/', function (req, res) {
     // just send a string which will be displayed in the browser
     res.send('BCO Cloud prototype');
 });
@@ -61,22 +59,25 @@ app.post('/login', urlencodedParser, passport.authenticate('local', {
     failureRedirect: '/login'
 }));
 
-// http://localhost:5000/dialog/authorization?client_id=google&redirect_uri=http://localhost:5000&state=state&scope=REQUESTED_SCOPES&response_type=code
-app.get('/dialog/authorization', routes.authorization);
-app.post('/dialog/authorization/decision', routes.decision);
+// http://localhost:5000/auth?client_id=GoogleAtBCO&redirect_uri=http://localhost:5000&state=state&scope=REQUESTED_SCOPES&response_type=code
+app.get('/auth', routes.authorization);
+app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
-app.get('/fulfillment',
+app.post('/fulfillment',
     passport.authenticate('bearer', {session: false}),
     function(request, response) {
         console.log(JSON.stringify(request.body));
-        console.log(JSON.stringify(request.params));
 
         //TODO: access token should be accessible by request.params and used to find the correct socket
-
-        onlySocket.send(JSON.stringify(request.body), (data) => {
-            response.json(data);
-        })
+        if(onlySocket) {
+            onlySocket.send(JSON.stringify(request.body), (data) => {
+                console.log('Received response: ' + data);
+                response.json(data);
+            })
+        } else {
+            response.status(400).send('No socket connection open');
+        }
     }
 );
 
@@ -131,9 +132,8 @@ server.listen(PORT, function () {
     // this function is called when the server is started
     console.log('listening on: ' + PORT);
 
-    let name = 'Tamino';
-    let token = require('./utils').generateKey();
-    let obj = {name, token};
-    console.log(JSON.stringify(obj));
-
+    console.log(process.env.SESSION_SECRET || 'sessionSecret');
+    console.log(process.env.SOCKET_PWD || 'socketPassword');
+    console.log(process.env.GOOGLE_ID || 'google');
+    console.log(process.env.GOOGLE_SECRET || 'googleSecret');
 });
