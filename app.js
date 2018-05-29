@@ -73,7 +73,8 @@ app.post('/fulfillment',
         if(onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
                 console.log('Received response: ' + data);
-                response.json(data);
+                response.set('Content-Type', 'application/json');
+                response.send(data);
             })
         } else {
             response.status(400).send('No socket connection open');
