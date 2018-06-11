@@ -6,8 +6,11 @@ const bodyParser = require('body-parser'); // plugin for express to parse user i
 const cookieParser = require('cookie-parser'); // plugin for express to retrieve cookies
 const passport = require('passport'); // plugin handling login
 const expressSession = require('express-session');
+const request = require('request'); // do http requests
+
 //TODO: this should only be used in development
 const errorHandler = require('errorhandler');
+
 const routes = require('./routes/oauth2');
 
 // passport configuration
@@ -22,6 +25,7 @@ const PORT = process.env.PORT || 5000;
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'sessionSecret';
 const SOCKET_PWD = process.env.SOCKET_PWD || 'socketPassword';
+const API_KEY = process.env.GOOGLE_API_KEY || '';
 
 // create a parser for information given via URL
 // the extended flag says which library is used, false means a simpler version
@@ -66,11 +70,11 @@ app.post('/oauth/token', routes.token);
 
 app.post('/fulfillment',
     passport.authenticate('bearer', {session: false}),
-    function(request, response) {
+    function (request, response) {
         console.log(JSON.stringify(request.body));
 
         //TODO: access token should be accessible by request.params and used to find the correct socket
-        if(onlySocket) {
+        if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
                 console.log('Received response: ' + data);
                 response.set('Content-Type', 'application/json');
@@ -82,6 +86,11 @@ app.post('/fulfillment',
     }
 );
 
+app.post('/test', (req, res) => {
+    console.log("Recieved test: " + JSON.stringify(req.body));
+    res.send("Success!");
+});
+
 
 let onlySocket;
 
@@ -89,7 +98,8 @@ let onlySocket;
 io.on('connection', function (socket) {
     console.log('a user connected with id: ' + socket.id);
 
-    if(onlySocket) {
+    //TODO: sockets can be added to rooms which should be used to organize multiple connections
+    if (onlySocket) {
         // for dev purposes only support one socket connection
         socket.disconnect(true);
     }
@@ -99,6 +109,7 @@ io.on('connection', function (socket) {
 
     onlySocket = socket;
 
+    //TODO: realize authentication via token
     // tell socket what to do if an event with the name authenticate is send
     socket.on('authenticate', function (data) {
         console.log('authenticate with data: ' + data);
@@ -126,15 +137,31 @@ io.on('connection', function (socket) {
         console.log('socket[' + socket.id + '] disconnected')
         onlySocket = undefined;
     });
+
+    //TODO: with authenticaiton via token, get the agent user id from that
+    socket.on('requestSync', () => {
+        console.log("Perform request sync")
+        // the last argument is a callback which can be used to give feedback to the client
+        let callback = arguments[arguments.length - 1];
+
+        let options = {
+            uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + API_KEY,
+            method: "POST",
+            json: {
+                agentUserId: "12345678"
+            }
+        };
+        request(options, (error, response, body) => {
+            if (error) {
+                console.log(error + " " + body)
+                callback("Error: " + error);
+            }
+        })
+    });
 });
 
 // start the server and tell it to listen on the given port
 server.listen(PORT, function () {
     // this function is called when the server is started
     console.log('listening on: ' + PORT);
-
-    console.log(process.env.SESSION_SECRET || 'sessionSecret');
-    console.log(process.env.SOCKET_PWD || 'socketPassword');
-    console.log(process.env.GOOGLE_ID || 'google');
-    console.log(process.env.GOOGLE_SECRET || 'googleSecret');
 });
