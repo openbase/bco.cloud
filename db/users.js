@@ -1,5 +1,8 @@
+const TEST_USER = process.env.TEST_USER || 'bco';
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'pwd';
+
 const users = [
-    {username: 'bco', password: 'pwd'}
+    {username: TEST_USER, password: TEST_PASSWORD}
 ];
 
 module.exports.findByUsername = function (username, done) {

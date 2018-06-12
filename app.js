@@ -13,6 +13,9 @@ const errorHandler = require('errorhandler');
 
 const routes = require('./routes/oauth2');
 
+const db = require('./db');
+const utils = require('./utils');
+
 // passport configuration
 require('./auth');
 
@@ -35,7 +38,7 @@ const urlencodedParser = bodyParser.urlencoded({extended: false});
 app.use(cookieParser());
 app.use(bodyParser.json({extended: false}));
 app.use(bodyParser.urlencoded({extended: false}));
-app.use(errorHandler());
+// app.use(errorHandler());
 app.use(expressSession({secret: SESSION_SECRET, resave: false, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -45,19 +48,19 @@ app.set('views', __dirname + '/views');
 // configure view engine to render EJS templates
 app.set('view engine', 'ejs');
 
-// tell the server what to do on an http get request on '/'
+// tell the server what to do on a http get request on '/'
 app.get('/', function (req, res) {
     // just send a string which will be displayed in the browser
     res.send('BCO Cloud prototype');
 });
 
-// tell the server what to do on an http get request on '/login'
+// tell the server what to do on a http get request on '/login'
 app.get('/login', function (req, res) {
     // render views/login.ejs
     res.render('login');
 });
 
-// tell the server what to do on an http post request on '/login'
+// tell the server what to do on a http post request on '/login'
 app.post('/login', urlencodedParser, passport.authenticate('local', {
     successReturnToOrRedirect: '/',
     failureRedirect: '/login'
@@ -69,7 +72,9 @@ app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
 app.post('/fulfillment',
+    // validate authentication via token
     passport.authenticate('bearer', {session: false}),
+    // send request via web socket and retrieve response
     function (request, response) {
         console.log(JSON.stringify(request.body));
 
@@ -87,12 +92,29 @@ app.post('/fulfillment',
 );
 
 app.post('/test', (req, res) => {
-    console.log("Recieved test: " + JSON.stringify(req.body));
+    console.log("Received test: " + JSON.stringify(req.body));
     res.send("Success!");
 });
 
 
 let onlySocket;
+let socketLogin = {};
+
+// this is done once when the socket is created
+io.use(function (socket, next) {
+    // get bco id from header
+    let id = socket.handshake.headers['id'];
+
+    console.log("Id[" + id + "]");
+    // validate that id is set
+    if (!id) {
+        return next(new Error("BCO id is missing!"));
+    }
+    // add bco id to socket object to allow easy access later
+    socket.bcoid = id;
+
+    next();
+});
 
 // tell socket what to do when a connection from a client is initialized
 io.on('connection', function (socket) {
@@ -100,61 +122,127 @@ io.on('connection', function (socket) {
 
     //TODO: sockets can be added to rooms which should be used to organize multiple connections
     if (onlySocket) {
-        // for dev purposes only support one socket connection
+        // for dev purposes only support one socket connection at a time
         socket.disconnect(true);
     }
-
-    // initialize a timeout of 3 seconds to close the socket connection if no authentication has been performed
-    let authenticationTimeout = setTimeout(() => socket.disconnect(true), 3000);
-
     onlySocket = socket;
 
-    //TODO: realize authentication via token
-    // tell socket what to do if an event with the name authenticate is send
-    socket.on('authenticate', function (data) {
-        console.log('authenticate with data: ' + data);
+    // create timeout that will automatically disconnect the socket connection if not authenticated until then
+    let time = 30 * 1000;
+    let authenticationTimeout = setTimeout(() => socket.disconnect(true), time);
 
-        // the last argument is a callback which can be used to give feedback to the client
-        let callback = arguments[arguments.length - 1];
-        // test if the data send matches the password
-        if (data === SOCKET_PWD) {
-            // clear the time out
-            clearTimeout(authenticationTimeout);
-            // inform client that authentication was a success
-            callback('Authentication success!');
-        } else {
-            // tell client that authentication failed
-            callback('Authentication failed!');
-            // disconnect client, this way the client has only one chance to authenticate
-            socket.disconnect(true);
-            // clear timeout because already disconnect
-            clearTimeout(authenticationTimeout);
+    // add a middleware, which will be executed before everything else;
+    socket.use((packet, next) => {
+        // if already logged in go on
+        if (socketLogin[socket.id]) {
+            return next();
         }
+
+        // if not logged in still let login attempts through
+        let eventName = packet[0];
+        if (eventName === 'login') {
+            return next();
+        }
+
+        // cause error
+        next(new Error('Invalid request without being logged in'))
     });
 
-    // tell socket what to do on disconnection, just log who disconnected
-    socket.on('disconnect', () => {
-        console.log('socket[' + socket.id + '] disconnected')
-        onlySocket = undefined;
-    });
-
-    //TODO: with authenticaiton via token, get the agent user id from that
-    socket.on('requestSync', () => {
-        console.log("Perform request sync")
+    // handle login attempts
+    socket.on('login', function (data) {
         // the last argument is a callback which can be used to give feedback to the client
         let callback = arguments[arguments.length - 1];
 
+        // parse received data
+        let parsed = JSON.parse(data);
+        let username = parsed.username;
+        let password = parsed.password;
+        let token = parsed.accessToken;
+
+        // if token has been send, validate it, else validate by username and password
+        if (token) {
+            console.log("Authenticated with token[" + token + "]");
+            db.accessTokens.find(token, (error, tokenData) => {
+                console.log("Found tokenData: " + JSON.stringify(tokenData) + " for token[" + token + "]")
+                if (error || !tokenData || tokenData.clientId !== socket.bcoid) {
+                    return callback("ERROR: Invalid access token");
+                }
+
+                // valid login
+                console.log("Received valid token");
+
+                // stop timeout
+                clearTimeout(authenticationTimeout);
+
+                // save that this socket is validated
+                socketLogin[socket.id] = true;
+                return callback(JSON.stringify({success: true}));
+            })
+        }
+
+        // if username and password are send validate them and generate token
+        if (username && password) {
+            console.log("Username[" + username + "], password[" + password + "]");
+            // validate that correct
+            db.users.findByUsername(username, function (error, user) {
+                // user could not be found or user password combination is invalid
+                if (error || !user || user.password !== password) {
+                    return callback("ERROR: Invalid combination of username and password");
+                }
+
+                // valid login
+                console.log("Generate and send accessToken");
+                // generate token
+                let token = utils.generateKey(32);
+                // save token for id and username
+                db.accessTokens.save(token, username, socket.bcoid, () => {
+                    // send token
+                    socket.emit('accessToken', token);
+
+                    // stop timeout
+                    clearTimeout(authenticationTimeout);
+
+                    // save that this socket is validated
+                    socketLogin[socket.id] = true;
+
+                    // return accessToken and success
+                    return callback(JSON.stringify({
+                        success: true,
+                        accessToken: token
+                    }));
+                });
+            });
+        }
+
+        callback("ERROR: Missing login information");
+    });
+
+    // what to do when disconnected
+    socket.on('disconnect', () => {
+        console.log('socket[' + socket.id + '] disconnected');
+        onlySocket = undefined;
+        delete socketLogin[socket.id];
+    });
+
+    socket.on('requestSync', function () {
+        console.log("Perform request sync");
+        // the last argument is a callback which can be used to give feedback to the client
+        let callback = arguments[arguments.length - 1];
+
+        // build options to perform a post request
         let options = {
             uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + API_KEY,
             method: "POST",
             json: {
-                agentUserId: "12345678"
+                agentUserId: socket.bcoid
             }
         };
+
+        // perform post request
         request(options, (error, response, body) => {
             if (error) {
-                console.log(error + " " + body)
-                callback("Error: " + error);
+                console.log(error + " " + body);
+                callback(error);
             }
         })
     });

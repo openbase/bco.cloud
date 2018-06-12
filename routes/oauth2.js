@@ -1,13 +1,13 @@
 const oauth2orize = require('oauth2orize');
 const passport = require('passport');
-const connectEnsuerLogin = require('connect-ensure-login');
 const db = require('../db');
+const connectEnsureLogin = require('connect-ensure-login');
 const utils = require('../utils');
 
 // Create OAuth 2.0 server
 const server = oauth2orize.createServer();
 
-// Register serialialization and deserialization functions.
+// Register serialization and deserialization functions.
 //
 // When a client redirects a user to user authorization endpoint, an
 // authorization transaction is initiated. To complete the transaction, the
@@ -91,7 +91,7 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
 
 // pipeline of callback for authorization
 module.exports.authorization = [
-    connectEnsuerLogin.ensureLoggedIn(),
+    connectEnsureLogin.ensureLoggedIn(),
     server.authorization((clientId, redirectUri, done) => {
         console.log("User is logged in, verify for clientId[" + clientId + "] and redirectURI[" + redirectUri + "]");
         db.clients.findById(clientId, (error, client) => {
@@ -123,7 +123,7 @@ module.exports.authorization = [
 // client, the above grant middleware configured above will be invoked to send
 // a response.
 exports.decision = [
-    connectEnsuerLogin.ensureLoggedIn(),
+    connectEnsureLogin.ensureLoggedIn(),
     server.decision(),
 ];
 
