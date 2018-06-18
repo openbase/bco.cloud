@@ -242,6 +242,8 @@ io.on('connection', function (socket) {
             if (error) {
                 console.log(error + " " + body);
                 callback(error);
+            } else {
+                console.log("RequestSync successful: " + body);
             }
         })
     });
