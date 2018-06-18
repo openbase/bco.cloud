@@ -27,7 +27,6 @@ const io = socketIO(server); // also add web socket to the http server
 const PORT = process.env.PORT || 5000;
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'sessionSecret';
-const SOCKET_PWD = process.env.SOCKET_PWD || 'socketPassword';
 const API_KEY = process.env.GOOGLE_API_KEY || '';
 
 // create a parser for information given via URL
@@ -95,7 +94,6 @@ app.post('/test', (req, res) => {
     console.log("Received test: " + JSON.stringify(req.body));
     res.send("Success!");
 });
-
 
 let onlySocket;
 let socketLogin = {};
