@@ -237,6 +237,8 @@ io.on('connection', function (socket) {
             }
         };
 
+        console.log("Request properties: " + JSON.stringify(options));
+
         // perform post request
         request(options, (error, response, body) => {
             if (error) {
