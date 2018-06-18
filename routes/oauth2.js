@@ -47,6 +47,7 @@ server.deserializeClient((id, done) => {
 
 server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
     const code = utils.generateKey();
+    console.log("Generated authCode[" + code + ", " + client.id + ", " + redirectUri + ", " + user.username + "]");
     db.authorizationCodes.save(code, client.id, redirectUri, user.username, (error) => {
         if (error) return done(error);
         return done(null, code);
@@ -66,6 +67,7 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
         if (redirectUri !== authCode.redirectURI) return done(null, false);
 
         const token = utils.generateKey();
+        console.log("Generates accessToken[" + token + ", " + authCode.user + ", " + authCode.clientId + "]");
         db.accessTokens.save(token, authCode.username, authCode.clientId, (error) => {
             if (error) return done(error);
             return done(null, token);
