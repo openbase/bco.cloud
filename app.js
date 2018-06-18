@@ -75,13 +75,13 @@ app.post('/fulfillment',
     passport.authenticate('bearer', {session: false}),
     // send request via web socket and retrieve response
     function (request, response) {
-        console.log(JSON.stringify(request.body));
+        console.log("Received request from google:\n" + JSON.stringify(request.body));
 
         //TODO: access token should be accessible by request.params and used to find the correct socket
         if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
                 // console.log('Received response: ' + data);
-                console.log("Send response back")
+                console.log("Send response back");
                 response.set('Content-Type', 'application/json');
                 response.send(data);
             })
