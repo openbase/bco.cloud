@@ -1,8 +1,8 @@
 const TEST_USER = process.env.TEST_USER || 'bco';
 const TEST_PASSWORD = process.env.TEST_PASSWORD || 'pwd';
 
-console.log("TestUser: " + TEST_USER);
-console.log("TestPassword: " + TEST_PASSWORD);
+// console.log("TestUser: " + TEST_USER);
+// console.log("TestPassword: " + TEST_PASSWORD);
 
 const users = [
     {username: TEST_USER, password: TEST_PASSWORD}

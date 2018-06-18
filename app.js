@@ -80,7 +80,8 @@ app.post('/fulfillment',
         //TODO: access token should be accessible by request.params and used to find the correct socket
         if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
-                console.log('Received response: ' + data);
+                // console.log('Received response: ' + data);
+                console.log("Send response back")
                 response.set('Content-Type', 'application/json');
                 response.send(data);
             })
