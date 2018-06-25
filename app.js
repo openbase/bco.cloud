@@ -81,7 +81,7 @@ app.post('/fulfillment',
         if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
                 // console.log('Received response: ' + data);
-                console.log("Send response back");
+                console.log("Send response back: " + data);
                 response.set('Content-Type', 'application/json');
                 response.send(data);
             })
@@ -242,10 +242,10 @@ io.on('connection', function (socket) {
         // perform post request
         request(options, (error, response, body) => {
             if (error) {
-                console.log(error + " " + body);
+                console.log(error + " " + JSON.stringify(body));
                 callback(error);
             } else {
-                console.log("RequestSync successful: " + body);
+                console.log("RequestSync successful: " + JSON.stringify(body));
             }
         })
     });
