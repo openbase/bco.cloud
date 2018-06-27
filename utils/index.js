@@ -8,3 +8,10 @@ module.exports.generateKey = function (length) {
 
     return crypto.randomBytes(byteNumber).toString('base64');
 };
+
+module.exports.hashPassword = function(password, salt) {
+    const hash = crypto.createHash('sha512');
+    hash.update(password);
+    hash.update(salt);
+    return hash.digest('hex');
+};

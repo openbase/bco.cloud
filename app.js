@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser'); // plugin for express to retrieve
 const passport = require('passport'); // plugin handling login
 const expressSession = require('express-session');
 const request = require('request'); // do http requests
+const connectEnsureLogin = require('connect-ensure-login');
 
 //TODO: this should only be used in development
 const errorHandler = require('errorhandler');
@@ -58,12 +59,38 @@ app.get('/login', function (req, res) {
     // render views/login.ejs
     res.render('login');
 });
+app.get('/register', (request, response) => {
+    response.render('register');
+});
+app.get('/registerClient', connectEnsureLogin.ensureLoggedIn(), (request, response) => {
+    response.render('registerClient');
+});
 
 // tell the server what to do on a http post request on '/login'
 app.post('/login', urlencodedParser, passport.authenticate('local', {
     successReturnToOrRedirect: '/',
     failureRedirect: '/login'
 }));
+app.post('/register', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (request, response) => {
+    db.users.save(request.body.username, request.body.password, (error) => {
+        //TODO: handle correctly
+        if (error) {
+            response.send("ERROR: " + error);
+        }
+
+        response.redirect('/');
+    });
+});
+app.post('/registerClient', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (request, response) => {
+    db.clients.save(request.body.clientId, request.body.redirectURI, request.body.secret, (error) => {
+        //TODO: handle correctly
+        if (error) {
+            response.send("ERROR: " + error);
+        }
+
+        response.redirect('/');
+    });
+});
 
 // http://localhost:5000/auth?client_id=GoogleAtBCO&redirect_uri=http://localhost:5000&state=state&scope=REQUESTED_SCOPES&response_type=code
 app.get('/auth', routes.authorization);
@@ -159,9 +186,9 @@ io.on('connection', function (socket) {
         // if token has been send, validate it, else validate by username and password
         if (token) {
             console.log("Authenticated with token[" + token + "]");
-            db.accessTokens.find(token, (error, tokenData) => {
+            db.tokens.findByToken(token, (error, tokenData) => {
                 console.log("Found tokenData: " + JSON.stringify(tokenData) + " for token[" + token + "]")
-                if (error || !tokenData || tokenData.clientId !== socket.bcoid) {
+                if (error || !tokenData || tokenData.client_id !== socket.bcoid) {
                     return callback("ERROR: Invalid access token");
                 }
 
@@ -183,16 +210,15 @@ io.on('connection', function (socket) {
             // validate that correct
             db.users.findByUsername(username, function (error, user) {
                 // user could not be found or user password combination is invalid
-                if (error || !user || user.password !== password) {
+                if (error || !user || user.password_hash !== utils.hashPassword(password, user.password_salt)) {
                     return callback("ERROR: Invalid combination of username and password");
                 }
 
                 // valid login
                 console.log("Generate and send accessToken");
-                // generate token
-                let token = utils.generateKey(32);
                 // save token for id and username
-                db.accessTokens.save(token, username, socket.bcoid, () => {
+                db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
+                    // TODO: handle error, and why is the token emitted and send via callback?
                     // send token
                     socket.emit('accessToken', token);
 

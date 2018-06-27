@@ -2,7 +2,7 @@ const oauth2orize = require('oauth2orize');
 const passport = require('passport');
 const db = require('../db');
 const connectEnsureLogin = require('connect-ensure-login');
-const utils = require('../utils');
+// const utils = require('../utils');
 
 // Create OAuth 2.0 server
 const server = oauth2orize.createServer();
@@ -46,12 +46,18 @@ server.deserializeClient((id, done) => {
 // values, and will be exchanged for an access token.
 
 server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
-    const code = utils.generateKey();
-    console.log("Generated authCode[" + code + ", " + client.id + ", " + redirectUri + ", " + user.username + "]");
-    db.authorizationCodes.save(code, client.id, redirectUri, user.username, (error) => {
-        if (error) return done(error);
-        return done(null, code);
+    // const code = utils.generateKey();
+    console.log("Generated authCode[" + client.id + ", " + redirectUri + ", " + user.username + "]");
+    db.tokens.generateToken(db.tokens.TOKEN_TYPE.AUTH_CODE, user.id, client.id, (error, token) => {
+        if (error) {
+            return done(error);
+        }
+        return done(token);
     });
+    // db.authorizationCodes.save(code, client.id, redirectUri, user.id, (error) => {
+    //     if (error) return done(error);
+    //     return done(null, code);
+    // });
 }));
 
 // Exchange authorization codes for access tokens. The callback accepts the
@@ -59,19 +65,24 @@ server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
 // authorization request for verification. If these values are validated, the
 // application issues an access token on behalf of the user who authorized the
 // code.
-
 server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
-    db.authorizationCodes.find(code, (error, authCode) => {
+    db.tokens.findByToken(code, (error, authCode) => {
         if (error) return done(error);
-        if (client.id !== authCode.clientId) return done(null, false);
-        if (redirectUri !== authCode.redirectURI) return done(null, false);
+        if (client.id !== authCode.client_id) return done(null, false);
+        if (redirectUri !== client.redirect_uri) return done(null, false);
 
-        const token = utils.generateKey();
-        console.log("Generates accessToken[" + token + ", " + authCode.user + ", " + authCode.clientId + "]");
-        db.accessTokens.save(token, authCode.username, authCode.clientId, (error) => {
-            if (error) return done(error);
+        console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
+        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, auth_code.user_id, client.id, (error, token) => {
+            if (error) {
+                return done(error);
+            }
             return done(null, token);
         });
+        // const token = utils.generateKey();
+        // db.accessTokens.save(token, authCode.username, authCode.clientId, (error) => {
+        //     if (error) return done(error);
+        //     return done(null, token);
+        // });
     });
 }));
 
@@ -101,10 +112,13 @@ module.exports.authorization = [
                 return done(error);
             }
 
-            //TODO: enable again
-            /*if(client.redirectURI !== redirectUri) {
+            if (!client) {
+                return done(new Error("Client with id[" + clientId + "] does not exist"))
+            }
+
+            if (client.redirect_uri !== redirectUri) {
                 return done(new Error("Redirect URI does not match"))
-            }*/
+            }
 
             return done(null, client, redirectUri);
         });

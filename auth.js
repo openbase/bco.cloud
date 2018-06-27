@@ -4,6 +4,7 @@ const BasicStrategy = require('passport-http').BasicStrategy;
 const ClientPasswordStrategy = require('passport-oauth2-client-password').Strategy;
 const BearerStrategy = require('passport-http-bearer').Strategy;
 const db = require('./db');
+const utils = require('./utils');
 
 passport.use(new LocalStrategy({}, function (username, password, done) {
     db.users.findByUsername(username, function (error, user) {
@@ -15,7 +16,7 @@ passport.use(new LocalStrategy({}, function (username, password, done) {
             return done(null, false);
         }
 
-        if (user.password !== password) {
+        if (user.password_hash !== utils.hashPassword(password, user.password_salt)) {
             return done(null, false);
         }
 
