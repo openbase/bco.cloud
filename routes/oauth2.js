@@ -72,7 +72,7 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
         if (redirectUri !== client.redirect_uri) return done(null, false);
 
         console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
-        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, auth_code.user_id, client.id, (error, token) => {
+        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id, (error, token) => {
             if (error) {
                 return done(error);
             }
