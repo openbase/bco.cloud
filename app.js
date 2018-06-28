@@ -8,6 +8,7 @@ const passport = require('passport'); // plugin handling login
 const expressSession = require('express-session');
 const request = require('request'); // do http requests
 const connectEnsureLogin = require('connect-ensure-login');
+const pgSession = require('connect-pg-simple')(expressSession);
 
 //TODO: this should only be used in development
 const errorHandler = require('errorhandler');
@@ -35,11 +36,22 @@ const API_KEY = process.env.GOOGLE_API_KEY || '';
 const urlencodedParser = bodyParser.urlencoded({extended: false});
 
 // use cookie parser no matter which http request or which path
-app.use(cookieParser());
+app.use(cookieParser(SESSION_SECRET));
 app.use(bodyParser.json({extended: false}));
 app.use(bodyParser.urlencoded({extended: false}));
 // app.use(errorHandler());
-app.use(expressSession({secret: SESSION_SECRET, resave: false, saveUninitialized: false}));
+app.use(expressSession({
+        store: new pgSession({
+            pool: db.pool,
+        }),
+        secret: SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            maxAge: 24 * 60 * 60 * 1000 // cookie expires after 24 hours
+        }
+    }
+));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -279,4 +291,28 @@ io.on('connection', function (socket) {
 server.listen(PORT, function () {
     // this function is called when the server is started
     console.log('listening on: ' + PORT);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    const cleanUp = () => {
+        // Clean up other resources like DB connections
+        db.pool.end();
+    };
+
+    console.log('Closing server...');
+    server.close(() => {
+        console.log('Server shutdown!');
+
+        cleanUp();
+        process.exit();
+    });
+
+    // Force close server after 5secs
+    setTimeout((e) => {
+        console.log('Forcing server shutdown!', e);
+
+        cleanUp();
+        process.exit(1);
+    }, 5000);
 });
