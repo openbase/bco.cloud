@@ -75,7 +75,7 @@ passport.use(new BearerStrategy(function (accessToken, done) {
             if (!token) return done(null, false);
             console.log("Found tokenData[" + JSON.stringify(token) + "]");
             if (token.user_id) {
-                db.users.findById(token.username, (error, user) => {
+                db.users.findById(token.user_id, (error, user) => {
                     if (error) return done(error);
                     if (!user) return done(null, false);
                     // To keep this example simple, restricted scopes are not implemented,
