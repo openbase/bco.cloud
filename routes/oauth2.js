@@ -52,7 +52,7 @@ server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
         if (error) {
             return done(error);
         }
-        return done(token);
+        return done(null, token);
     });
     // db.authorizationCodes.save(code, client.id, redirectUri, user.id, (error) => {
     //     if (error) return done(error);
