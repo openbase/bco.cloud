@@ -116,7 +116,10 @@ app.post('/fulfillment',
     function (request, response) {
         console.log("Received request from google:\n" + JSON.stringify(request.body));
 
+        let accessToken = request.headers.authorization.replace("Bearer ", "");
         console.log(JSON.stringify(request.headers));
+        console.log(request.headers.authorization);
+        console.log(accessToken);
         //TODO: access token should be accessible by request.params and used to find the correct socket
         if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
