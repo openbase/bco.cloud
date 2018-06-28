@@ -71,7 +71,7 @@ app.get('/login', function (req, res) {
     // render views/login.ejs
     res.render('login');
 });
-app.get('/register', (request, response) => {
+app.get('/register', connectEnsureLogin.ensureLoggedIn(), (request, response) => {
     response.render('register');
 });
 app.get('/registerClient', connectEnsureLogin.ensureLoggedIn(), (request, response) => {
@@ -227,25 +227,45 @@ io.on('connection', function (socket) {
                 }
 
                 // valid login
+
+                // stop timeout
+                clearTimeout(authenticationTimeout);
+
+                // send back access token
                 console.log("Generate and send accessToken");
-                // save token for id and username
-                db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
-                    // TODO: handle error, and why is the token emitted and send via callback?
-                    // send token
-                    socket.emit('accessToken', token);
+                db.tokens.findByUserClientAndType(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
+                    if (error) {
+                        console.log(error);
+                        return callback("ERROR: Could not check if access token for this user and client combination already exists");
+                    }
 
-                    // stop timeout
-                    clearTimeout(authenticationTimeout);
+                    if (token !== undefined) {
+                        // token already exists, send it again with success
+                        return callback(JSON.stringify({
+                            success: true,
+                            accessToken: token
+                        }));
+                    }
 
-                    // save that this socket is validated
-                    socketLogin[socket.id] = true;
+                    // token does not already exist so generate and save a new one
+                    db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, newToken) => {
+                        if (error) {
+                            console.log(error);
+                            return callback("Error while generating an access token!");
+                        }
 
-                    // return accessToken and success
-                    return callback(JSON.stringify({
-                        success: true,
-                        accessToken: token
-                    }));
+
+                        // save that this socket is validated
+                        socketLogin[socket.id] = true;
+
+                        // return accessToken and success
+                        return callback(JSON.stringify({
+                            success: true,
+                            accessToken: newToken
+                        }));
+                    });
                 });
+
             });
         }
 
