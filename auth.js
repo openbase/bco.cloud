@@ -69,7 +69,7 @@ passport.use(new ClientPasswordStrategy(verifyClient));
 
 
 passport.use(new BearerStrategy(function (accessToken, done) {
-        db.accessTokens.find(accessToken, (error, token) => {
+        db.tokens.findByToken(accessToken, (error, token) => {
             if (error) return done(error);
             if (!token) return done(null, false);
             if (token.username) {
