@@ -69,11 +69,13 @@ passport.use(new ClientPasswordStrategy(verifyClient));
 
 
 passport.use(new BearerStrategy(function (accessToken, done) {
+        console.log("Authenticate with accessToken[" + accessToken + "]");
         db.tokens.findByToken(accessToken, (error, token) => {
             if (error) return done(error);
             if (!token) return done(null, false);
-            if (token.username) {
-                db.users.findByUsername(token.username, (error, user) => {
+            console.log("Found tokenData[" + Json.stringify(token) + "]");
+            if (token.user_id) {
+                db.users.findById(token.username, (error, user) => {
                     if (error) return done(error);
                     if (!user) return done(null, false);
                     // To keep this example simple, restricted scopes are not implemented,
@@ -83,7 +85,7 @@ passport.use(new BearerStrategy(function (accessToken, done) {
             } else {
                 // The request came from a client only since userId is null,
                 // therefore the client is passed back instead of a user.
-                db.clients.findById(token.clientId, (error, client) => {
+                db.clients.findById(token.client_id, (error, client) => {
                     if (error) return done(error);
                     if (!client) return done(null, false);
                     // To keep this example simple, restricted scopes are not implemented,

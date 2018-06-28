@@ -59,6 +59,19 @@ const isUsernameUsed = function (username, done) {
     });
 };
 
+const FIND_BY_ID_QUERY = "SELECT * FROM users WHERE users.id = $1";
+const findById = function (id, done) {
+    pool.query(FIND_BY_ID_QUERY, [id], (error, result) => {
+        if (error) {
+            return done(error);
+        }
+
+        return done(null, result.rows[0]);
+    });
+};
+
+
 module.exports.save = save;
 module.exports.isUsernameUsed = isUsernameUsed;
 module.exports.findByUsername = findByUsername;
+module.exports.findById = findById;
