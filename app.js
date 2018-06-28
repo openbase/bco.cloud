@@ -116,6 +116,7 @@ app.post('/fulfillment',
     function (request, response) {
         console.log("Received request from google:\n" + JSON.stringify(request.body));
 
+        console.log("Params: " + JSON.stringify(request.params));
         //TODO: access token should be accessible by request.params and used to find the correct socket
         if (onlySocket) {
             onlySocket.send(JSON.stringify(request.body), (data) => {
@@ -133,7 +134,7 @@ app.post('/test', (req, res) => {
     res.send("Success!");
 });
 
-let onlySocket;
+let onlySocket = undefined;
 let socketLogin = {};
 
 // this is done once when the socket is created
@@ -212,6 +213,8 @@ io.on('connection', function (socket) {
 
                 // save that this socket is validated
                 socketLogin[socket.id] = true;
+                // let socket join room with its bco id
+                socket.json(socket.bcoid);
                 return callback(JSON.stringify({success: true}));
             })
         }
@@ -228,6 +231,11 @@ io.on('connection', function (socket) {
 
                 // valid login so stop timeout
                 clearTimeout(authenticationTimeout);
+
+                // save that this socket is validated
+                socketLogin[socket.id] = true;
+                // let socket join room with its bco id
+                socket.json(socket.bcoid);
 
                 const returnAccessToken = function () {
                     // send back access token
@@ -252,10 +260,6 @@ io.on('connection', function (socket) {
                                 console.log(error);
                                 return callback("Error while generating an access token!");
                             }
-
-
-                            // save that this socket is validated
-                            socketLogin[socket.id] = true;
 
                             // return accessToken and success
                             return callback(JSON.stringify({
