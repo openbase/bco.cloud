@@ -31,6 +31,11 @@ server.deserializeClient((id, done) => {
     });
 });
 
+//TODO: if tokens already exist, retrieve them because generating new ones will fail
+// why is the client secret never checked?
+// test if this implementation can be modified to fit the implicit flow by google
+// tokens currently to not expire
+
 // Register supported grant types.
 //
 // OAuth 2.0 specifies a framework that allows users to grant client

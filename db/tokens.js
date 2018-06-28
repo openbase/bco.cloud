@@ -69,9 +69,9 @@ const findByToken = function (token, done) {
     });
 };
 
-const FIND_BY_USER_CLIENT_AND_TYPE = "SELECT * FROM tokens WHERE tokens.token = $1 AND tokens.user_id = $2 AND tokens.client_id = $3";
-const findByUserClientAndType = function (type, user_id, client_id, done) {
-    pool.query(FIND_BY_USER_CLIENT_AND_TYPE, [type, user_id, client_id], (error, result) => {
+const FIND_BY_USER_CLIENT_AND_TYPE = "SELECT * FROM tokens WHERE tokens.type = $1 AND tokens.user_id = $2 AND tokens.client_id = $3";
+const findByUserClientAndType = function (type, userId, clientId, done) {
+    pool.query(FIND_BY_USER_CLIENT_AND_TYPE, [type, userId, clientId], (error, result) => {
         if (error) {
             return done(error);
         }

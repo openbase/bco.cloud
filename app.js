@@ -220,52 +220,72 @@ io.on('connection', function (socket) {
         if (username && password) {
             console.log("Username[" + username + "], password[" + password + "]");
             // validate that correct
-            db.users.findByUsername(username, function (error, user) {
+            return db.users.findByUsername(username, function (error, user) {
                 // user could not be found or user password combination is invalid
                 if (error || !user || user.password_hash !== utils.hashPassword(password, user.password_salt)) {
                     return callback("ERROR: Invalid combination of username and password");
                 }
 
-                // valid login
-
-                // stop timeout
+                // valid login so stop timeout
                 clearTimeout(authenticationTimeout);
 
-                // send back access token
-                console.log("Generate and send accessToken");
-                db.tokens.findByUserClientAndType(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
-                    if (error) {
-                        console.log(error);
-                        return callback("ERROR: Could not check if access token for this user and client combination already exists");
-                    }
-
-                    if (token !== undefined) {
-                        // token already exists, send it again with success
-                        return callback(JSON.stringify({
-                            success: true,
-                            accessToken: token
-                        }));
-                    }
-
-                    // token does not already exist so generate and save a new one
-                    db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, newToken) => {
+                const returnAccessToken = function () {
+                    // send back access token
+                    console.log("Generate and send accessToken");
+                    db.tokens.findByUserClientAndType(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
                         if (error) {
                             console.log(error);
-                            return callback("Error while generating an access token!");
+                            return callback("ERROR: Could not check if access token for this user and client combination already exists");
                         }
 
+                        if (token !== undefined) {
+                            // token already exists, send it again with success
+                            return callback(JSON.stringify({
+                                success: true,
+                                accessToken: token.token
+                            }));
+                        }
 
-                        // save that this socket is validated
-                        socketLogin[socket.id] = true;
+                        // token does not already exist so generate and save a new one
+                        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, newToken) => {
+                            if (error) {
+                                console.log(error);
+                                return callback("Error while generating an access token!");
+                            }
 
-                        // return accessToken and success
-                        return callback(JSON.stringify({
-                            success: true,
-                            accessToken: newToken
-                        }));
+
+                            // save that this socket is validated
+                            socketLogin[socket.id] = true;
+
+                            // return accessToken and success
+                            return callback(JSON.stringify({
+                                success: true,
+                                accessToken: newToken.token
+                            }));
+                        });
                     });
-                });
+                };
 
+                // register bco as client of not already done
+                db.clients.findById(socket.bcoid, (error, client) => {
+                    if (error) {
+                        console.log(error);
+                        return callback("ERROR: Could not validate if bco is already registered as a client");
+                    }
+
+                    // client already exists
+                    if (client !== undefined) {
+                        returnAccessToken();
+                    } else {
+                        db.clients.save(socket.bcoid, null, null, (error) => {
+                            if (error) {
+                                console.log(error);
+                                return callback("ERROR: Could not save bco instance as a client");
+                            }
+                            returnAccessToken();
+                        })
+                    }
+                });
             });
         }
 
