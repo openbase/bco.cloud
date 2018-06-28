@@ -116,29 +116,29 @@ app.post('/fulfillment',
     function (request, response) {
         console.log("Received request from google:\n" + JSON.stringify(request.body));
 
+        // parse access token from header
         let accessToken = request.headers.authorization.replace("Bearer ", "");
-        console.log(JSON.stringify(request.headers));
-        console.log(request.headers.authorization);
-        console.log(accessToken);
-        //TODO: access token should be accessible by request.params and used to find the correct socket
-        if (onlySocket) {
-            onlySocket.send(JSON.stringify(request.body), (data) => {
-                response.set('Content-Type', 'application/json');
-                response.send(data);
-            })
-        } else {
-            response.status(400).send('No socket connection open');
-        }
+
+        db.tokens.findByToken(accessToken, (error, tokenData) => {
+            if (error || tokenData === undefined) {
+                // this should not happen because the token is already verified by the authentication
+                console.log(error)
+            }
+
+            if (!loggedInSockets[tokenData.client_id]) {
+                console.log("Ignore request because client[" + tokenData.client_id + "] is currently not connected");
+                response.status(400).send("The requested client is currently not connected");
+            } else {
+                loggedInSockets[tokenData.client_id].send(JSON.stringify(request.body), (data) => {
+                    response.set('Content-Type', 'application/json');
+                    response.send(data);
+                });
+            }
+        });
     }
 );
 
-app.post('/test', (req, res) => {
-    console.log("Received test: " + JSON.stringify(req.body));
-    res.send("Success!");
-});
-
-let onlySocket = undefined;
-let socketLogin = {};
+let loggedInSockets = {};
 
 // this is done once when the socket is created
 io.use(function (socket, next) {
@@ -160,13 +160,6 @@ io.use(function (socket, next) {
 io.on('connection', function (socket) {
     console.log('a user connected with id: ' + socket.id);
 
-    //TODO: sockets can be added to rooms which should be used to organize multiple connections
-    if (onlySocket) {
-        // for dev purposes only support one socket connection at a time
-        socket.disconnect(true);
-    }
-    onlySocket = socket;
-
     // create timeout that will automatically disconnect the socket connection if not authenticated until then
     let time = 30 * 1000;
     let authenticationTimeout = setTimeout(() => socket.disconnect(true), time);
@@ -174,7 +167,7 @@ io.on('connection', function (socket) {
     // add a middleware, which will be executed before everything else;
     socket.use((packet, next) => {
         // if already logged in go on
-        if (socketLogin[socket.id]) {
+        if (loggedInSockets[socket.bcoid]) {
             return next();
         }
 
@@ -214,10 +207,8 @@ io.on('connection', function (socket) {
                 // stop timeout
                 clearTimeout(authenticationTimeout);
 
-                // save that this socket is validated
-                socketLogin[socket.id] = true;
-                // let socket join room with its bco id
-                socket.json(socket.bcoid);
+                // save this socket with its bco id
+                loggedInSockets[socket.bcoid] = socket;
                 return callback(JSON.stringify({success: true}));
             })
         }
@@ -236,9 +227,7 @@ io.on('connection', function (socket) {
                 clearTimeout(authenticationTimeout);
 
                 // save that this socket is validated
-                socketLogin[socket.id] = true;
-                // let socket join room with its bco id
-                socket.json(socket.bcoid);
+                loggedInSockets[socket.bcoid] = socket;
 
                 const returnAccessToken = function () {
                     // send back access token
@@ -302,8 +291,7 @@ io.on('connection', function (socket) {
     // what to do when disconnected
     socket.on('disconnect', () => {
         console.log('socket[' + socket.id + '] disconnected');
-        onlySocket = undefined;
-        delete socketLogin[socket.id];
+        delete loggedInSockets[socket.bcoid];
     });
 
     socket.on('requestSync', function () {
