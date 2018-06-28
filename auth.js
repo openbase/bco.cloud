@@ -73,7 +73,7 @@ passport.use(new BearerStrategy(function (accessToken, done) {
         db.tokens.findByToken(accessToken, (error, token) => {
             if (error) return done(error);
             if (!token) return done(null, false);
-            console.log("Found tokenData[" + Json.stringify(token) + "]");
+            console.log("Found tokenData[" + JSON.stringify(token) + "]");
             if (token.user_id) {
                 db.users.findById(token.username, (error, user) => {
                     if (error) return done(error);
