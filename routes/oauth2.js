@@ -74,7 +74,7 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
     db.tokens.findByToken(code, (error, authCode) => {
         if (error) return done(error);
         if (client.id !== authCode.client_id) return done(null, false);
-        if (redirectUri !== client.redirect_uri) return done(null, false);
+        // if (redirectUri !== client.redirect_uri) return done(null, false);
 
         console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
         db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id, (error, token) => {
@@ -121,9 +121,9 @@ module.exports.authorization = [
                 return done(new Error("Client with id[" + clientId + "] does not exist"))
             }
 
-            if (client.redirect_uri !== redirectUri) {
-                return done(new Error("Redirect URI does not match"))
-            }
+            // if (client.redirect_uri !== redirectUri) {
+            //     return done(new Error("Redirect URI does not match"))
+            // }
 
             return done(null, client, redirectUri);
         });
