@@ -125,7 +125,7 @@ app.post('/fulfillment',
                 console.log(error)
             }
 
-            if (!loggedInSockets[tokenData.client_id]) {
+            if (!loggedInSockets[tokenData.user_id]) {
                 console.log("Ignore request because client[" + tokenData.client_id + "] is currently not connected");
                 response.status(400).send("The requested client is currently not connected");
             } else {
