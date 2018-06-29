@@ -80,8 +80,20 @@ const findByUserClientAndType = function (type, userId, clientId, done) {
     });
 };
 
+const SELECT_QUERY = "SELECT * FROM tokens WHERE user_id = $1 AND NOT client_id = $2";
+const findTest = function (userId, clientId, done) {
+    pool.query(SELECT_QUERY, [userId, clientId], (error, result) => {
+        if (error) {
+            return done(error);
+        }
+
+        return done(null, result.rows[0]);
+    });
+};
+
 module.exports.TOKEN_TYPE = TOKEN_TYPE;
 module.exports.save = save;
 module.exports.generateToken = generateToken;
 module.exports.findByToken = findByToken;
 module.exports.findByUserClientAndType = findByUserClientAndType;
+module.exports.findTest = findTest;
