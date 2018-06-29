@@ -126,10 +126,10 @@ app.post('/fulfillment',
             }
 
             if (!loggedInSockets[tokenData.user_id]) {
-                console.log("Ignore request because client[" + tokenData.client_id + "] is currently not connected");
+                console.log("Ignore request because user[" + tokenData.user_id + "] is currently not connected");
                 response.status(400).send("The requested client is currently not connected");
             } else {
-                loggedInSockets[tokenData.client_id].send(JSON.stringify(request.body), (data) => {
+                loggedInSockets[tokenData.user_id].send(JSON.stringify(request.body), (data) => {
                     response.set('Content-Type', 'application/json');
                     response.send(data);
                 });
@@ -295,7 +295,7 @@ io.on('connection', function (socket) {
     });
 
     socket.on('requestSync', function () {
-        console.log("Perform request sync");
+        console.log("Perform request sync for [" + socket.id + ", " + loggedInSockets[socket.bcoid].id + "]");
         // the last argument is a callback which can be used to give feedback to the client
         let callback = arguments[arguments.length - 1];
 
