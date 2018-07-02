@@ -77,6 +77,10 @@ app.get('/register', connectEnsureLogin.ensureLoggedIn(), (request, response) =>
 app.get('/registerClient', connectEnsureLogin.ensureLoggedIn(), (request, response) => {
     response.render('registerClient');
 });
+app.get('/logout', function(req, res){
+    req.logout();
+    res.redirect('/');
+});
 
 // tell the server what to do on a http post request on '/login'
 app.post('/login', urlencodedParser, passport.authenticate('local', {
@@ -119,17 +123,22 @@ app.post('/fulfillment',
         // parse access token from header
         let accessToken = request.headers.authorization.replace("Bearer ", "");
 
+        // get according token data from the database
         db.tokens.findByToken(accessToken, (error, tokenData) => {
             if (error || tokenData === undefined) {
                 // this should not happen because the token is already verified by the authentication
                 console.log(error)
             }
 
-            db.tokens.findTest(tokenData.user_id, tokenData.client_id, (error, data) => {
+            // find another token for this user but a different client
+            // this is the token with the bco id as the client id
+            db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id, (error, data) => {
                 if(error) {
                     console.log(error);
+                    response.status(400).send(error);
                 }
 
+                // use the socket with the given bco id
                 if (!loggedInSockets[data.client_id]) {
                     console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
                     response.status(400).send("The requested client is currently not connected");

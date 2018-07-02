@@ -31,7 +31,6 @@ server.deserializeClient((id, done) => {
     });
 });
 
-//TODO: if tokens already exist, retrieve them because generating new ones will fail
 // why is the client secret never checked?
 // test if this implementation can be modified to fit the implicit flow by google
 // tokens currently to not expire
@@ -52,17 +51,13 @@ server.deserializeClient((id, done) => {
 
 server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
     // const code = utils.generateKey();
-    console.log("Generated authCode[" + client.id + ", " + redirectUri + ", " + user.username + "]");
+    console.log("Generate authCode[" + client.id + ", " + redirectUri + ", " + user.username + "]");
     db.tokens.generateToken(db.tokens.TOKEN_TYPE.AUTH_CODE, user.id, client.id, (error, token) => {
         if (error) {
             return done(error);
         }
         return done(null, token);
     });
-    // db.authorizationCodes.save(code, client.id, redirectUri, user.id, (error) => {
-    //     if (error) return done(error);
-    //     return done(null, code);
-    // });
 }));
 
 // Exchange authorization codes for access tokens. The callback accepts the
@@ -74,7 +69,7 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
     db.tokens.findByToken(code, (error, authCode) => {
         if (error) return done(error);
         if (client.id !== authCode.client_id) return done(null, false);
-        // if (redirectUri !== client.redirect_uri) return done(null, false);
+        if (redirectUri !== client.redirect_uri) return done(null, false);
 
         console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
         db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id, (error, token) => {
@@ -83,11 +78,6 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
             }
             return done(null, token);
         });
-        // const token = utils.generateKey();
-        // db.accessTokens.save(token, authCode.username, authCode.clientId, (error) => {
-        //     if (error) return done(error);
-        //     return done(null, token);
-        // });
     });
 }));
 
@@ -121,9 +111,9 @@ module.exports.authorization = [
                 return done(new Error("Client with id[" + clientId + "] does not exist"))
             }
 
-            // if (client.redirect_uri !== redirectUri) {
-            //     return done(new Error("Redirect URI does not match"))
-            // }
+            if (client.redirect_uri !== redirectUri) {
+                return done(new Error("Redirect URI does not match"))
+            }
 
             return done(null, client, redirectUri);
         });
