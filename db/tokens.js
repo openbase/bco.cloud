@@ -25,13 +25,13 @@ const save = function (token, type, userId, clientId, done) {
 };
 // function that will generate a new token, but will also delete an old one if for the combination of type, user and client a token already exists
 const generateToken = function (type, userId, clientId, done) {
-    db.tokens.findByUserClientAndType(type, userId, clientId, (error, tokenData) => {
+    findByUserClientAndType(type, userId, clientId, (error, tokenData) => {
         if (error) {
             return done(error);
         }
 
         if (tokenData !== undefined) {
-            db.tokens.deleteToken(tokenData.token, (error) => {
+            deleteToken(tokenData.token, (error) => {
                 if (error) {
                     return done(error);
                 }
