@@ -119,8 +119,11 @@ df.intent("register scene", (conv, {location, label}) => {
     console.log("Should now register a scene named[" + label + "] in[" + location + "]");
     conv.close("Erledigt.");
 });
+df.intent('favorite color', (conv, {color}) => {
+    conv.close("Your favorite color is [" + color + "]");
+});
 
-app.post('/fulfillment/register-scene', function (request, response, next) {
+app.post('/fulfillment/action', function (request, response, next) {
     console.log(request.body);
     next();
 }, df);
