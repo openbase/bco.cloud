@@ -123,6 +123,9 @@ df.intent('favorite color', (conv, {color}) => {
     console.log(JSON.stringify(conv));
     conv.close("Your favorite color is [" + color + "]");
 });
+df.intent('user-activity', (conv, {activity}) => {
+    conv.close("Du machst gerade [" + activity + "]");
+});
 
 app.post('/fulfillment/action', function (request, response, next) {
     console.log(JSON.stringify(request.body));
