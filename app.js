@@ -120,11 +120,12 @@ df.intent("register scene", (conv, {location, label}) => {
     conv.close("Erledigt.");
 });
 df.intent('favorite color', (conv, {color}) => {
+    console.log(JSON.stringify(conv));
     conv.close("Your favorite color is [" + color + "]");
 });
 
 app.post('/fulfillment/action', function (request, response, next) {
-    console.log(request.body);
+    console.log(JSON.stringify(request.body));
     next();
 }, df);
 
