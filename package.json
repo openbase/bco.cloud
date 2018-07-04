@@ -13,6 +13,7 @@
   "author": "Tamino Huxohl",
   "license": "GPL-3.0-only",
   "dependencies": {
+    "actions-on-google": "^2.2.0",
     "body-parser": "^1.18.3",
     "connect-ensure-login": "^0.1.1",
     "connect-pg-simple": "^5.0.0",

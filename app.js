@@ -77,7 +77,7 @@ app.get('/register', connectEnsureLogin.ensureLoggedIn(), (request, response) =>
 app.get('/registerClient', connectEnsureLogin.ensureLoggedIn(), (request, response) => {
     response.render('registerClient');
 });
-app.get('/logout', function(req, res){
+app.get('/logout', function (req, res) {
     req.logout();
     res.redirect('/');
 });
@@ -113,6 +113,18 @@ app.get('/auth', routes.authorization);
 app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
+const {dialogflow} = require('actions-on-google');
+const df = new dialogflow();
+df.intent("register scene", (conv, {location, label}) => {
+    console.log("Should now register a scene named[" + label + "] in[" + location + "]");
+    conv.close("Erledigt.");
+});
+
+app.post('/fulfillment/register-scene', function (request, response, next) {
+    console.log(request.body);
+    next();
+}, df);
+
 app.post('/fulfillment',
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
@@ -133,7 +145,7 @@ app.post('/fulfillment',
             // find another token for this user but a different client
             // this is the token with the bco id as the client id
             db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id, (error, data) => {
-                if(error) {
+                if (error) {
                     console.log(error);
                     response.status(400).send(error);
                 }
