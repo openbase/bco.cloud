@@ -114,7 +114,7 @@ app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
 const {dialogflow} = require('actions-on-google');
-const df = new dialogflow();
+const df = dialogflow();
 df.intent("register scene", (conv, {location, label}) => {
     console.log("Should now register a scene named[" + label + "] in[" + location + "]");
     conv.close("Erledigt.");
