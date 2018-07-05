@@ -126,7 +126,7 @@ df.intent('favorite color', (conv, {color}) => {
 df.intent('user-activity', (conv, {activity}) => {
     conv.close("Du machst gerade [" + activity + "]");
 });
-df.intent('user transit', (conv, {userTransit}) => {
+df.intent('user transit', (conv) => {
     let userTransit = conv.parameters["user-transit"];
     console.log("Received user transit value[" + userTransit + "]");
     if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
