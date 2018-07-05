@@ -127,9 +127,13 @@ df.intent('user-activity', (conv, {activity}) => {
     conv.close("Du machst gerade [" + activity + "]");
 });
 df.intent('user transit', (conv, {presence}) => {
+    console.log("Received presence value[" + presence + "]");
     if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
-        loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user presence", presence, (response) => {
-            conv.close("Ich habe den Wert geändert. " + response);
+        return new Promise(function (resolve, reject) {
+            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user presence", presence, (response) => {
+                conv.close("Ich habe den Wert geändert. " + response);
+                resolve();
+            });
         });
     } else {
         conv.close("Tut mit leid. Aber dein BCO System ist nicht verbunden");
