@@ -130,7 +130,8 @@ df.intent('user transit', (conv, {presence}) => {
     console.log("Received presence value[" + presence + "]");
     if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
         return new Promise(function (resolve, reject) {
-            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user presence", presence, (response) => {
+            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
+            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", presence, (response) => {
                 conv.close("Ich habe den Wert geändert. " + response);
                 resolve();
             });
