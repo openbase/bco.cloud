@@ -126,12 +126,13 @@ df.intent('favorite color', (conv, {color}) => {
 df.intent('user-activity', (conv, {activity}) => {
     conv.close("Du machst gerade [" + activity + "]");
 });
-df.intent('user transit', (conv, {presence}) => {
-    console.log("Received presence value[" + presence + "]");
+df.intent('user transit', (conv, {userTransit}) => {
+    console.log(JSON.stringify(conv));
+    console.log("Received presence value[" + userTransit + "]");
     if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
-            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", presence, (response) => {
+            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", userTransit, (response) => {
                 conv.close("Ich habe den Wert geändert. " + response);
                 resolve();
             });
