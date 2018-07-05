@@ -133,7 +133,7 @@ df.intent('user transit', (conv) => {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
             loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", userTransit, (response) => {
-                timeout.cancel();
+                clearTimeout(timeout);
                 if (response === "SUCCESS") {
                     conv.close("Alles klar");
                 } else {
