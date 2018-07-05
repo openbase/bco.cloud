@@ -127,14 +127,18 @@ df.intent('user-activity', (conv, {activity}) => {
     conv.close("Du machst gerade [" + activity + "]");
 });
 df.intent('user transit', (conv, {userTransit}) => {
-    console.log(conv.parameters["user-transit"]);
-    console.log("Received presence value[" + userTransit + "]");
+    let userTransit = conv.parameters["user-transit"];
+    console.log("Received user transit value[" + userTransit + "]");
     if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
             loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", userTransit, (response) => {
                 timeout.cancel();
-                conv.close("Ich habe den Wert geändert. " + response);
+                if (response === "SUCCESS") {
+                    conv.close("Alles klar");
+                } else {
+                    conv.close("Ein Fehler ist aufgetreten");
+                }
                 resolve();
             });
         });
@@ -143,10 +147,7 @@ df.intent('user transit', (conv, {userTransit}) => {
     }
 });
 
-app.post('/fulfillment/action', function (request, response, next) {
-    console.log(JSON.stringify(request.body));
-    next();
-}, df);
+app.post('/fulfillment/action', df);
 
 app.post('/fulfillment',
     // validate authentication via token
