@@ -176,8 +176,8 @@ app.post('/fulfillment',
                     response.status(400).send(error);
                 }
 
-                console.log("Found bco token data[" + JSON.stringify(data) + "]");
-                
+                console.log("Found bco token data[" + JSON.stringify(data) + "][" + loggedInSockets[data.client_id] + "]");
+
                 // use the socket with the given bco id
                 if (!loggedInSockets[data.client_id]) {
                     console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
