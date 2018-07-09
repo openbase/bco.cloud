@@ -116,7 +116,6 @@ app.post('/oauth/token', routes.token);
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
 df.intent("register scene", (conv) => {
-    console.log(JSON.stringify(conv));
     console.log("Should now register a scene named[" + conv.parameters["label"] + "] in[" + conv.parameters["location"] + "]");
     conv.close("Erledigt.");
 });
@@ -167,6 +166,8 @@ app.post('/fulfillment',
                 console.log(error)
             }
 
+            console.log("Found token data[" + JSON.stringify(tokenData) + "]");
+
             // find another token for this user but a different client
             // this is the token with the bco id as the client id
             db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id, (error, data) => {
@@ -175,6 +176,8 @@ app.post('/fulfillment',
                     response.status(400).send(error);
                 }
 
+                console.log("Found bco token data[" + JSON.stringify(data) + "]");
+                
                 // use the socket with the given bco id
                 if (!loggedInSockets[data.client_id]) {
                     console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
