@@ -115,8 +115,9 @@ app.post('/oauth/token', routes.token);
 
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
-df.intent("register scene", (conv, {location, label}) => {
-    console.log("Should now register a scene named[" + label + "] in[" + location + "]");
+df.intent("register scene", (conv) => {
+    console.log(JSON.stringify(conv));
+    console.log("Should now register a scene named[" + conv.parameters["label"] + "] in[" + conv.parameters["location"] + "]");
     conv.close("Erledigt.");
 });
 df.intent('favorite color', (conv, {color}) => {
