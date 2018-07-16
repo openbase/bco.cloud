@@ -358,17 +358,23 @@ io.on('connection', function (socket) {
                 return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
             }
 
+            console.log("Found token by bco id [" + JSON.stringify(data) + "]");
+
             db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
                 if (error) {
                     console.log(error);
                     return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
                 }
 
+                console.log("Found other token for this user [" + JSON.stringify(tokenData) + "]");
+
                 db.clients.findById(tokenData.client_id, (error, client) => {
                     if (error) {
                         console.log(error);
                         return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
                     }
+
+                    console.log("Found client from that request[" + JSON.stringify(client) + "]");
 
                     // build options to perform a post request
                     let options = {
@@ -393,27 +399,6 @@ io.on('connection', function (socket) {
                 });
             });
         });
-
-        // build options to perform a post request
-        // let options = {
-        //     uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + API_KEY,
-        //     method: "POST",
-        //     json: {
-        //         agentUserId: socket.bcoid
-        //     }
-        // };
-        //
-        // console.log("Request properties: " + JSON.stringify(options));
-        //
-        // // perform post request
-        // request(options, (error, response, body) => {
-        //     if (error) {
-        //         console.log(error + " " + JSON.stringify(body));
-        //         callback(error);
-        //     } else {
-        //         console.log("RequestSync successful: " + JSON.stringify(body));
-        //     }
-        // })
     });
 });
 
@@ -425,6 +410,7 @@ server.listen(PORT, function () {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
+    console.log(utils.generateKey());
     const cleanUp = () => {
         // Clean up other resources like DB connections
         db.pool.end();
