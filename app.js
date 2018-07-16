@@ -237,7 +237,14 @@ io.on('connection', function (socket) {
     // handle login attempts
     socket.on('login', function (data) {
         // the last argument is a callback which can be used to give feedback to the client
+        // this is only true if the client expects an answer - handle accordingly
         let callback = arguments[arguments.length - 1];
+
+        if(!callback) {
+            // socket does no expect an answer which is invalid so disconnect and clear timeout
+            socket.disconnect(true);
+            clearTimeout(authenticationTimeout);
+        }
 
         // parse received data
         let parsed = JSON.parse(data);
@@ -350,18 +357,28 @@ io.on('connection', function (socket) {
     socket.on('requestSync', function (data) {
         console.log("Perform request sync");
 
+        // the last argument is a callback which can be used to give feedback to the client
+        // this is only true if the client expects an answer
         let callback = arguments[arguments.length - 1];
         console.log(callback);
 
         db.tokens.findByClient(socket.bcoid, (error, data) => {
             if (error) {
                 console.log(error);
-                return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                if(callback) {
+                    return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                } else {
+                    return;
+                }
             }
 
             if (!data || data.length !== 1) {
                 console.log("Could not resolve token for bco client[" + socket.bcoid + "]");
-                return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                if(callback) {
+                    return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                } else {
+                    return;
+                }
             }
 
             console.log("Found token by bco id [" + JSON.stringify(data) + "]");
@@ -369,12 +386,20 @@ io.on('connection', function (socket) {
             db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
                 if (error) {
                     console.log(error);
-                    return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                    if(callback) {
+                        return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                    } else {
+                        return;
+                    }
                 }
 
                 if (!tokenData) {
                     console.log("Could not resolve token for user[" + data[0].user_id + "] with different client id than[" + data[0].client_id + "]");
-                    return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                    if(callback) {
+                        return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                    } else {
+                        return;
+                    }
                 }
 
                 console.log("Found other token for this user [" + JSON.stringify(tokenData) + "]");
@@ -382,12 +407,20 @@ io.on('connection', function (socket) {
                 db.clients.findById(tokenData.client_id, (error, client) => {
                     if (error) {
                         console.log(error);
-                        return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                        if(callback) {
+                            return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                        } else {
+                            return;
+                        }
                     }
 
                     if (!client) {
                         console.log("Could not resolve client with id[" + tokenData.client_id + "]");
-                        return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                        if(callback) {
+                            return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
+                        } else {
+                            return;
+                        }
                     }
 
                     console.log("Found client from that request[" + JSON.stringify(client) + "]");
