@@ -98,7 +98,7 @@ app.post('/register', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (re
     });
 });
 app.post('/registerClient', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (request, response) => {
-    db.clients.save(request.body.clientId, request.body.redirectURI, request.body.secret, (error) => {
+    db.clients.save(request.body.clientId, request.body.redirectURI, request.body.secret, request.body.apiKey, (error) => {
         //TODO: handle correctly
         if (error) {
             response.send("ERROR: " + error);
@@ -166,8 +166,6 @@ app.post('/fulfillment',
                 console.log(error)
             }
 
-            console.log("Found token data[" + JSON.stringify(tokenData) + "]");
-
             // find another token for this user but a different client
             // this is the token with the bco id as the client id
             db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id, (error, data) => {
@@ -175,8 +173,6 @@ app.post('/fulfillment',
                     console.log(error);
                     response.status(400).send(error);
                 }
-
-                console.log("Found bco token data[" + JSON.stringify(data) + "][" + loggedInSockets[data.client_id] + "]");
 
                 // use the socket with the given bco id
                 if (!loggedInSockets[data.client_id]) {
@@ -356,26 +352,68 @@ io.on('connection', function (socket) {
         // the last argument is a callback which can be used to give feedback to the client
         let callback = arguments[arguments.length - 1];
 
+        db.tokens.findByClient(socket.bcoid, (error, data) => {
+            if (error || data.length !== 1) {
+                console.log(error);
+                return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+            }
+
+            db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
+                if (error) {
+                    console.log(error);
+                    return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                }
+
+                db.clients.findById(tokenData.client_id, (error, client) => {
+                    if (error) {
+                        console.log(error);
+                        return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
+                    }
+
+                    // build options to perform a post request
+                    let options = {
+                        uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + client.api_key,
+                        method: "POST",
+                        json: {
+                            agentUserId: socket.bcoid
+                        }
+                    };
+
+                    console.log("Request properties: " + JSON.stringify(options));
+
+                    // perform post request
+                    request(options, (error, response, body) => {
+                        if (error) {
+                            console.log(error + " " + JSON.stringify(body));
+                            callback(error);
+                        } else {
+                            console.log("RequestSync successful: " + JSON.stringify(body));
+                        }
+                    })
+                });
+            });
+        });
+
         // build options to perform a post request
-        let options = {
-            uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + API_KEY,
-            method: "POST",
-            json: {
-                agentUserId: socket.bcoid
-            }
-        };
-
-        console.log("Request properties: " + JSON.stringify(options));
-
-        // perform post request
-        request(options, (error, response, body) => {
-            if (error) {
-                console.log(error + " " + JSON.stringify(body));
-                callback(error);
-            } else {
-                console.log("RequestSync successful: " + JSON.stringify(body));
-            }
-        })
+        // let options = {
+        //     uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + API_KEY,
+        //     method: "POST",
+        //     json: {
+        //         agentUserId: socket.bcoid
+        //     }
+        // };
+        //
+        // console.log("Request properties: " + JSON.stringify(options));
+        //
+        // // perform post request
+        // request(options, (error, response, body) => {
+        //     if (error) {
+        //         console.log(error + " " + JSON.stringify(body));
+        //         callback(error);
+        //     } else {
+        //         console.log("RequestSync successful: " + JSON.stringify(body));
+        //     }
+        // })
     });
 });
 

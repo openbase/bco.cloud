@@ -101,6 +101,17 @@ const findByUserAndNotClient = function (userId, clientId, done) {
     });
 };
 
+const FIND_BY_CLIENT_QUERY = "SELECT * FROM tokens WHERE client_id = $1";
+const findByClient = function (clientId, done) {
+    pool.query(FIND_BY_CLIENT_QUERY, [clientId], (error, result) => {
+        if (error) {
+            return done(error);
+        }
+
+        return done(null, result.rows);
+    });
+};
+
 const DELETE_TOKEN_QUERY = "DELETE FROM tokens WHERE token = $1";
 const deleteToken = function (token, done) {
     pool.query(DELETE_TOKEN_QUERY, [token], (error) => {
@@ -119,3 +130,4 @@ module.exports.findByToken = findByToken;
 module.exports.findByUserClientAndType = findByUserClientAndType;
 module.exports.findByUserAndNotClient = findByUserAndNotClient;
 module.exports.deleteToken = deleteToken;
+module.exports.findByClient = findByClient;

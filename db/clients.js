@@ -15,9 +15,9 @@ const pool = require('./pool').getPool();
 //     }
 // ];
 
-const REGISTER_QUERY = 'INSERT INTO clients (id, redirect_uri, secret) VALUES ($1, $2, $3)';
-const save = function (id, redirectUri, secret, done) {
-    pool.query(REGISTER_QUERY, [id, redirectUri, secret], (error) => {
+const REGISTER_QUERY = 'INSERT INTO clients (id, redirect_uri, secret, api_key) VALUES ($1, $2, $3, $4)';
+const save = function (id, redirectUri, secret, api_key, done) {
+    pool.query(REGISTER_QUERY, [id, redirectUri, secret, api_key], (error) => {
         if (error) {
             return done(error);
         }
