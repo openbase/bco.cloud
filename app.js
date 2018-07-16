@@ -347,10 +347,8 @@ io.on('connection', function (socket) {
         delete loggedInSockets[socket.bcoid];
     });
 
-    socket.on('requestSync', function () {
+    socket.on('requestSync', (data, callback) => {
         console.log("Perform request sync");
-        // the last argument is a callback which can be used to give feedback to the client
-        let callback = arguments[arguments.length - 1];
 
         db.tokens.findByClient(socket.bcoid, (error, data) => {
             if (error || !data || data.length !== 1) {
