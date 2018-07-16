@@ -353,7 +353,7 @@ io.on('connection', function (socket) {
         let callback = arguments[arguments.length - 1];
 
         db.tokens.findByClient(socket.bcoid, (error, data) => {
-            if (error || data.length !== 1) {
+            if (error || !data || data.length !== 1) {
                 console.log(error);
                 return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
             }
@@ -361,7 +361,7 @@ io.on('connection', function (socket) {
             console.log("Found token by bco id [" + JSON.stringify(data) + "]");
 
             db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
-                if (error) {
+                if (error || !tokenData) {
                     console.log(error);
                     return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
                 }
@@ -369,7 +369,7 @@ io.on('connection', function (socket) {
                 console.log("Found other token for this user [" + JSON.stringify(tokenData) + "]");
 
                 db.clients.findById(tokenData.client_id, (error, client) => {
-                    if (error) {
+                    if (error || !client) {
                         console.log(error);
                         return callback(new Error("Could not resolve api key for bcoid[" + socket.bcoid + "]"));
                     }
