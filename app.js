@@ -240,7 +240,7 @@ io.on('connection', function (socket) {
         // this is only true if the client expects an answer - handle accordingly
         let callback = arguments[arguments.length - 1];
 
-        if(!callback) {
+        if (!callback) {
             // socket does no expect an answer which is invalid so disconnect and clear timeout
             socket.disconnect(true);
             clearTimeout(authenticationTimeout);
@@ -333,7 +333,7 @@ io.on('connection', function (socket) {
                     if (client !== undefined) {
                         returnAccessToken();
                     } else {
-                        db.clients.save(socket.bcoid, null, null, (error) => {
+                        db.clients.save(socket.bcoid, null, null, null, (error) => {
                             if (error) {
                                 console.log(error);
                                 return callback("ERROR: Could not save bco instance as a client");
@@ -365,7 +365,7 @@ io.on('connection', function (socket) {
         db.tokens.findByClient(socket.bcoid, (error, data) => {
             if (error) {
                 console.log(error);
-                if(callback) {
+                if (callback) {
                     return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                 } else {
                     return;
@@ -374,7 +374,7 @@ io.on('connection', function (socket) {
 
             if (!data || data.length !== 1) {
                 console.log("Could not resolve token for bco client[" + socket.bcoid + "]");
-                if(callback) {
+                if (callback) {
                     return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                 } else {
                     return;
@@ -386,7 +386,7 @@ io.on('connection', function (socket) {
             db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
                 if (error) {
                     console.log(error);
-                    if(callback) {
+                    if (callback) {
                         return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                     } else {
                         return;
@@ -395,7 +395,7 @@ io.on('connection', function (socket) {
 
                 if (!tokenData) {
                     console.log("Could not resolve token for user[" + data[0].user_id + "] with different client id than[" + data[0].client_id + "]");
-                    if(callback) {
+                    if (callback) {
                         return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                     } else {
                         return;
@@ -407,7 +407,7 @@ io.on('connection', function (socket) {
                 db.clients.findById(tokenData.client_id, (error, client) => {
                     if (error) {
                         console.log(error);
-                        if(callback) {
+                        if (callback) {
                             return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                         } else {
                             return;
@@ -416,7 +416,7 @@ io.on('connection', function (socket) {
 
                     if (!client) {
                         console.log("Could not resolve client with id[" + tokenData.client_id + "]");
-                        if(callback) {
+                        if (callback) {
                             return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
                         } else {
                             return;
