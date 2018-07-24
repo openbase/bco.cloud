@@ -6,11 +6,9 @@ const BearerStrategy = require('passport-http-bearer').Strategy;
 const db = require('./db');
 const utils = require('./utils');
 
-passport.use(new LocalStrategy({}, function (username, password, done) {
-    db.users.findByUsername(username, function (error, user) {
-        if (error) {
-            return done(error);
-        }
+passport.use(new LocalStrategy({}, async function (username, password, done) {
+    try {
+        let user = await db.users.findByUsername(username);
 
         if (!user) {
             return done(null, false);
@@ -21,17 +19,21 @@ passport.use(new LocalStrategy({}, function (username, password, done) {
         }
 
         return done(null, user);
-    });
+    } catch (e) {
+        return done(e)
+    }
 }));
 
 passport.serializeUser(function (user, done) {
     done(null, user.username);
 });
 
-passport.deserializeUser(function (username, done) {
-    db.users.findByUsername(username, function (error, user) {
-        return done(error, user);
-    });
+passport.deserializeUser(async function (username, done) {
+    try {
+        return done(null, await db.users.findByUsername(username));
+    } catch (e) {
+        return done(e);
+    }
 });
 
 /**
@@ -45,11 +47,9 @@ passport.deserializeUser(function (username, done) {
  * to the `Authorization` header). While this approach is not recommended by
  * the specification, in practice it is quite common.
  */
-function verifyClient(clientId, clientSecret, done) {
-    db.clients.findById(clientId, (error, client) => {
-        if (error) {
-            return done(error);
-        }
+async function verifyClient(clientId, clientSecret, done) {
+    try {
+        client = await db.clients.findById(clientId);
 
         if (!client) {
             return done(null, false);
@@ -60,7 +60,9 @@ function verifyClient(clientId, clientSecret, done) {
         }
 
         return done(null, client);
-    });
+    } catch (e) {
+        return done(e);
+    }
 }
 
 passport.use(new BasicStrategy(verifyClient));
@@ -68,32 +70,36 @@ passport.use(new BasicStrategy(verifyClient));
 passport.use(new ClientPasswordStrategy(verifyClient));
 
 
-passport.use(new BearerStrategy(function (accessToken, done) {
+passport.use(new BearerStrategy(async function (accessToken, done) {
         console.log("Authenticate with accessToken[" + accessToken + "]");
-        db.tokens.findByToken(accessToken, (error, token) => {
-            if (error) return done(error);
-            if (!token) return done(null, false);
-            console.log("Found tokenData[" + JSON.stringify(token) + "]");
+        try {
+            let token = await db.tokens.findByToken(accessToken);
+            if (!token) {
+                return done(null, false);
+            }
+
             if (token.user_id) {
-                db.users.findById(token.user_id, (error, user) => {
-                    if (error) return done(error);
-                    if (!user) return done(null, false);
-                    // To keep this example simple, restricted scopes are not implemented,
-                    // and this is just for illustrative purposes.
-                    done(null, user, {scope: '*'});
-                });
+                let user = await db.users.findById(token.user_id);
+                if (!user) {
+                    return done(null, false);
+                }
+                // To keep this example simple, restricted scopes are not implemented,
+                // and this is just for illustrative purposes.
+                return done(null, user, {scope: '*'});
             } else {
                 // The request came from a client only since userId is null,
                 // therefore the client is passed back instead of a user.
-                db.clients.findById(token.client_id, (error, client) => {
-                    if (error) return done(error);
-                    if (!client) return done(null, false);
-                    // To keep this example simple, restricted scopes are not implemented,
-                    // and this is just for illustrative purposes.
-                    done(null, client, {scope: '*'});
-                });
+                let client = await db.clients.findById(token.client_id);
+                if (!client) {
+                    return done(null, false);
+                }
+                // To keep this example simple, restricted scopes are not implemented,
+                // and this is just for illustrative purposes.
+                return done(null, client, {scope: '*'});
             }
-        });
+        } catch (e) {
+            return done(e)
+        }
     }
 ));
 

@@ -1,35 +1,29 @@
 // import dependencies/modules
 const http = require('http'); // basic http server
 const express = require('express'); // improvement of http
-const socketIO = require('socket.io'); // web socket communication
 const bodyParser = require('body-parser'); // plugin for express to parse user input into body object
 const cookieParser = require('cookie-parser'); // plugin for express to retrieve cookies
 const passport = require('passport'); // plugin handling login
 const expressSession = require('express-session');
-const request = require('request'); // do http requests
 const connectEnsureLogin = require('connect-ensure-login');
 const pgSession = require('connect-pg-simple')(expressSession);
-
-//TODO: this should only be used in development
-const errorHandler = require('errorhandler');
 
 const routes = require('./routes/oauth2');
 
 const db = require('./db');
 const utils = require('./utils');
+const socketUtils = require("./socket_utils");
 
 // passport configuration
 require('./auth');
 
 const app = express(); // create an express app
 const server = http.Server(app); // add it is the http server
-const io = socketIO(server); // also add web socket to the http server
 
 // read port from Heroku env or use 5000 as default
 const PORT = process.env.PORT || 5000;
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'sessionSecret';
-const API_KEY = process.env.GOOGLE_API_KEY || '';
 
 // create a parser for information given via URL
 // the extended flag says which library is used, false means a simpler version
@@ -87,25 +81,23 @@ app.post('/login', urlencodedParser, passport.authenticate('local', {
     successReturnToOrRedirect: '/',
     failureRedirect: '/login'
 }));
-app.post('/register', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (request, response) => {
-    db.users.save(request.body.username, request.body.password, (error) => {
-        //TODO: handle correctly
-        if (error) {
-            response.send("ERROR: " + error);
-        }
-
+app.post('/register', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), async (request, response) => {
+    try {
+        await db.users.save(request.body.username, request.body.password, request.body.email);
         response.redirect('/');
-    });
+    } catch (e) {
+        //TODO: handle correctly
+        response.send("ERROR: " + e)
+    }
 });
-app.post('/registerClient', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), (request, response) => {
-    db.clients.save(request.body.clientId, request.body.redirectURI, request.body.secret, request.body.apiKey, (error) => {
-        //TODO: handle correctly
-        if (error) {
-            response.send("ERROR: " + error);
-        }
-
+app.post('/registerClient', urlencodedParser, connectEnsureLogin.ensureLoggedIn(), async (request, response) => {
+    try {
+        await db.clients.save(request.body.clientId, request.body.redirectURI, request.body.secret);
         response.redirect('/');
-    });
+    } catch (e) {
+        //TODO: handle correctly
+        response.send("ERROR: " + e)
+    }
 });
 
 // http://localhost:5000/auth?client_id=GoogleAtBCO&redirect_uri=http://localhost:5000&state=state&scope=REQUESTED_SCOPES&response_type=code
@@ -129,10 +121,10 @@ df.intent('user-activity', (conv, {activity}) => {
 df.intent('user transit', (conv) => {
     let userTransit = conv.parameters["user-transit"];
     console.log("Received user transit value[" + userTransit + "]");
-    if (loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"]) {
+    if (socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
-            loggedInSockets["60c11123-6ae7-412e-8b94-25787f3f2f9b"].emit("user transit", userTransit, (response) => {
+            socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b").emit("user transit", userTransit, (response) => {
                 clearTimeout(timeout);
                 if (response === "SUCCESS") {
                     conv.close("Alles klar");
@@ -153,313 +145,42 @@ app.post('/fulfillment',
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
     // send request via web socket and retrieve response
-    function (request, response) {
+    async function (request, response) {
         console.log("Received request from google:\n" + JSON.stringify(request.body));
 
         // parse access token from header
         let accessToken = request.headers.authorization.replace("Bearer ", "");
 
-        // get according token data from the database
-        db.tokens.findByToken(accessToken, (error, tokenData) => {
-            if (error || tokenData === undefined) {
-                // this should not happen because the token is already verified by the authentication
-                console.log(error)
+        try {
+            let tokenData = await db.tokens.findByToken(accessToken);
+            let data = await db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id);
+            // use the socket with the given bco id
+            if (!socketUtils.getSocketByBCOId(data.client_id)) {
+                console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
+                response.status(400).send("The requested client is currently not connected");
+            } else {
+                socketUtils.getSocketByBCOId(data.client_id).send(JSON.stringify(request.body), (data) => {
+                    response.set('Content-Type', 'application/json');
+                    response.send(data);
+                });
             }
-
-            // find another token for this user but a different client
-            // this is the token with the bco id as the client id
-            db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id, (error, data) => {
-                if (error) {
-                    console.log(error);
-                    response.status(400).send(error);
-                }
-
-                // use the socket with the given bco id
-                if (!loggedInSockets[data.client_id]) {
-                    console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
-                    response.status(400).send("The requested client is currently not connected");
-                } else {
-                    loggedInSockets[data.client_id].send(JSON.stringify(request.body), (data) => {
-                        response.set('Content-Type', 'application/json');
-                        response.send(data);
-                    });
-                }
-            });
-
-
-        });
+        } catch (e) {
+            console.log(e);
+            response.status(400).send(error.message);
+        }
     }
 );
 
-let loggedInSockets = {};
-
-// this is done once when the socket is created
-io.use(function (socket, next) {
-    // get bco id from header
-    let id = socket.handshake.headers['id'];
-
-    console.log("Id[" + id + "]");
-    // validate that id is set
-    if (!id) {
-        return next(new Error("BCO id is missing!"));
-    }
-    // add bco id to socket object to allow easy access later
-    socket.bcoid = id;
-
-    next();
-});
-
-// tell socket what to do when a connection from a client is initialized
-io.on('connection', function (socket) {
-    console.log('a user connected with id: ' + socket.id);
-
-    // create timeout that will automatically disconnect the socket connection if not authenticated until then
-    let time = 30 * 1000;
-    let authenticationTimeout = setTimeout(() => socket.disconnect(true), time);
-
-    // add a middleware, which will be executed before everything else;
-    socket.use((packet, next) => {
-        // if already logged in go on
-        if (loggedInSockets[socket.bcoid]) {
-            return next();
-        }
-
-        // if not logged in still let login attempts through
-        let eventName = packet[0];
-        if (eventName === 'login') {
-            return next();
-        }
-
-        // cause error
-        next(new Error('Invalid request without being logged in'))
-    });
-
-    // handle login attempts
-    socket.on('login', function (data) {
-        // the last argument is a callback which can be used to give feedback to the client
-        // this is only true if the client expects an answer - handle accordingly
-        let callback = arguments[arguments.length - 1];
-
-        if (!callback) {
-            // socket does no expect an answer which is invalid so disconnect and clear timeout
-            socket.disconnect(true);
-            clearTimeout(authenticationTimeout);
-        }
-
-        // parse received data
-        let parsed = JSON.parse(data);
-        let username = parsed.username;
-        let password = parsed.password;
-        let token = parsed.accessToken;
-
-        // if token has been send, validate it, else validate by username and password
-        if (token) {
-            console.log("Authenticated with token[" + token + "]");
-            db.tokens.findByToken(token, (error, tokenData) => {
-                console.log("Found tokenData: " + JSON.stringify(tokenData) + " for token[" + token + "]")
-                if (error || !tokenData || tokenData.client_id !== socket.bcoid) {
-                    return callback("ERROR: Invalid access token");
-                }
-
-                // valid login
-                console.log("Received valid token");
-
-                // stop timeout
-                clearTimeout(authenticationTimeout);
-
-                // save this socket with its bco id
-                loggedInSockets[socket.bcoid] = socket;
-                return callback(JSON.stringify({success: true}));
-            })
-        }
-
-        // if username and password are send validate them and generate token
-        if (username && password) {
-            console.log("Username[" + username + "], password[" + password + "]");
-            // validate that correct
-            return db.users.findByUsername(username, function (error, user) {
-                // user could not be found or user password combination is invalid
-                if (error || !user || user.password_hash !== utils.hashPassword(password, user.password_salt)) {
-                    return callback("ERROR: Invalid combination of username and password");
-                }
-
-                // valid login so stop timeout
-                clearTimeout(authenticationTimeout);
-
-                // save that this socket is validated
-                loggedInSockets[socket.bcoid] = socket;
-
-                const returnAccessToken = function () {
-                    // send back access token
-                    console.log("Generate and send accessToken");
-                    db.tokens.findByUserClientAndType(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, token) => {
-                        if (error) {
-                            console.log(error);
-                            return callback("ERROR: Could not check if access token for this user and client combination already exists");
-                        }
-
-                        if (token !== undefined) {
-                            // token already exists, send it again with success
-                            return callback(JSON.stringify({
-                                success: true,
-                                accessToken: token.token
-                            }));
-                        }
-
-                        // token does not already exist so generate and save a new one
-                        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, user.id, socket.bcoid, (error, newToken) => {
-                            if (error) {
-                                console.log(error);
-                                return callback("Error while generating an access token!");
-                            }
-
-                            // return accessToken and success
-                            return callback(JSON.stringify({
-                                success: true,
-                                accessToken: newToken.token
-                            }));
-                        });
-                    });
-                };
-
-                // register bco as client of not already done
-                db.clients.findById(socket.bcoid, (error, client) => {
-                    if (error) {
-                        console.log(error);
-                        return callback("ERROR: Could not validate if bco is already registered as a client");
-                    }
-
-                    // client already exists
-                    if (client !== undefined) {
-                        returnAccessToken();
-                    } else {
-                        db.clients.save(socket.bcoid, null, null, null, (error) => {
-                            if (error) {
-                                console.log(error);
-                                return callback("ERROR: Could not save bco instance as a client");
-                            }
-                            returnAccessToken();
-                        })
-                    }
-                });
-            });
-        }
-
-        callback("ERROR: Missing login information");
-    });
-
-    // what to do when disconnected
-    socket.on('disconnect', () => {
-        console.log('socket[' + socket.id + '] disconnected');
-        delete loggedInSockets[socket.bcoid];
-    });
-
-    socket.on('requestSync', function (data) {
-        console.log("Perform request sync");
-
-        // the last argument is a callback which can be used to give feedback to the client
-        // this is only true if the client expects an answer
-        let callback = arguments[arguments.length - 1];
-        console.log(callback);
-
-        db.tokens.findByClient(socket.bcoid, (error, data) => {
-            if (error) {
-                console.log(error);
-                if (callback) {
-                    return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                } else {
-                    return;
-                }
-            }
-
-            if (!data || data.length !== 1) {
-                console.log("Could not resolve token for bco client[" + socket.bcoid + "]");
-                if (callback) {
-                    return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                } else {
-                    return;
-                }
-            }
-
-            console.log("Found token by bco id [" + JSON.stringify(data) + "]");
-
-            db.tokens.findByUserAndNotClient(data[0].user_id, data[0].client_id, (error, tokenData) => {
-                if (error) {
-                    console.log(error);
-                    if (callback) {
-                        return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                    } else {
-                        return;
-                    }
-                }
-
-                if (!tokenData) {
-                    console.log("Could not resolve token for user[" + data[0].user_id + "] with different client id than[" + data[0].client_id + "]");
-                    if (callback) {
-                        return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                    } else {
-                        return;
-                    }
-                }
-
-                console.log("Found other token for this user [" + JSON.stringify(tokenData) + "]");
-
-                db.clients.findById(tokenData.client_id, (error, client) => {
-                    if (error) {
-                        console.log(error);
-                        if (callback) {
-                            return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                        } else {
-                            return;
-                        }
-                    }
-
-                    if (!client) {
-                        console.log("Could not resolve client with id[" + tokenData.client_id + "]");
-                        if (callback) {
-                            return callback("Could not resolve api key for bcoid[" + socket.bcoid + "]");
-                        } else {
-                            return;
-                        }
-                    }
-
-                    console.log("Found client from that request[" + JSON.stringify(client) + "]");
-
-                    // build options to perform a post request
-                    let options = {
-                        uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + client.api_key,
-                        method: "POST",
-                        json: {
-                            agentUserId: socket.bcoid
-                        }
-                    };
-
-                    console.log("Request properties: " + JSON.stringify(options));
-
-                    // perform post request
-                    request(options, (error, response, body) => {
-                        if (error) {
-                            console.log(error + " " + JSON.stringify(body));
-                            callback(error);
-                        } else {
-                            console.log("RequestSync successful: " + JSON.stringify(body));
-                        }
-                    })
-                });
-            });
-        });
-    });
-});
+socketUtils.initSocketIO(server);
 
 // start the server and tell it to listen on the given port
-server.listen(PORT, function () {
+server.listen(PORT, async function () {
     // this function is called when the server is started
     console.log('listening on: ' + PORT);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-    console.log(utils.generateKey());
     const cleanUp = () => {
         // Clean up other resources like DB connections
         db.pool.end();

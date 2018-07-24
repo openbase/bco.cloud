@@ -24,13 +24,15 @@ const server = oauth2orize.createServer();
 server.serializeClient((client, done) => done(null, client.id));
 
 // get client object from storage
-server.deserializeClient((id, done) => {
-    db.clients.findById(id, (error, client) => {
-        if (error) return done(error);
-        return done(null, client);
-    });
+server.deserializeClient(async (id, done) => {
+    try {
+        done(null, await db.clients.findById(id));
+    } catch (e) {
+        done(e);
+    }
 });
 
+//TODO:
 // why is the client secret never checked?
 // test if this implementation can be modified to fit the implicit flow by google
 // tokens currently to not expire
@@ -49,15 +51,13 @@ server.deserializeClient((id, done) => {
 // the application. The application issues a code, which is bound to these
 // values, and will be exchanged for an access token.
 
-server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
-    // const code = utils.generateKey();
+server.grant(oauth2orize.grant.code(async (client, redirectUri, user, ares, done) => {
     console.log("Generate authCode[" + client.id + ", " + redirectUri + ", " + user.username + "]");
-    db.tokens.generateToken(db.tokens.TOKEN_TYPE.AUTH_CODE, user.id, client.id, (error, token) => {
-        if (error) {
-            return done(error);
-        }
-        return done(null, token);
-    });
+    try {
+        done(null, await db.tokens.generateToken(db.tokens.TOKEN_TYPE.AUTH_CODE, user.id, client.id));
+    } catch (e) {
+        done(e);
+    }
 }));
 
 // Exchange authorization codes for access tokens. The callback accepts the
@@ -65,20 +65,20 @@ server.grant(oauth2orize.grant.code((client, redirectUri, user, ares, done) => {
 // authorization request for verification. If these values are validated, the
 // application issues an access token on behalf of the user who authorized the
 // code.
-server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
-    db.tokens.findByToken(code, (error, authCode) => {
-        if (error) return done(error);
-        if (client.id !== authCode.client_id) return done(null, false);
-        if (redirectUri !== client.redirect_uri) return done(null, false);
-
+server.exchange(oauth2orize.exchange.code(async (client, code, redirectUri, done) => {
+    try {
+        let authCode = await db.tokens.findByToken(code);
+        if (client.id !== authCode.client_id) {
+            return done(null, false);
+        }
+        if (redirectUri !== client.redirect_uri) {
+            return done(null, false);
+        }
         console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
-        db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id, (error, token) => {
-            if (error) {
-                return done(error);
-            }
-            return done(null, token);
-        });
-    });
+        done(null, await db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id));
+    } catch (e) {
+        done(e);
+    }
 }));
 
 // User authorization endpoint.
@@ -100,23 +100,20 @@ server.exchange(oauth2orize.exchange.code((client, code, redirectUri, done) => {
 // pipeline of callback for authorization
 module.exports.authorization = [
     connectEnsureLogin.ensureLoggedIn(),
-    server.authorization((clientId, redirectUri, done) => {
+    server.authorization(async (clientId, redirectUri, done) => {
         console.log("User is logged in, verify for clientId[" + clientId + "] and redirectURI[" + redirectUri + "]");
-        db.clients.findById(clientId, (error, client) => {
-            if (error) {
-                return done(error);
-            }
-
+        try {
+            client = await db.clients.findById(clientId);
             if (!client) {
-                return done(new Error("Client with id[" + clientId + "] does not exist"))
+                return done(new Error("Client with id[" + clientId + "] does not exist"));
             }
-
             if (client.redirect_uri !== redirectUri) {
                 return done(new Error("Redirect URI does not match"))
             }
-
             return done(null, client, redirectUri);
-        });
+        } catch (e) {
+            done(e);
+        }
     }),
     (request, response) => {
         response.render('dialog', {
