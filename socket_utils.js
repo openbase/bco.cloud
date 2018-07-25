@@ -198,16 +198,25 @@ const register = async function (socket, data) {
     }
 };
 
+const SYNC_API_KEY = process.env.GOOGLE_API_KEY;
+const SYNC_REQUEST_URI = "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + SYNC_API_KEY;
+
 const requestSync = function (socket, data) {
     console.log("Perform request sync");
 
     // the last argument is a callback which can be used to give feedback to the client
     // this is only true if the client expects an answer
     let callback = arguments[arguments.length - 1];
-    console.log(callback);
+    //TODO: handle if callback not available
+
+    // api key is not defined locally, so if started locally just print a debug message
+    if (!SYNC_API_KEY) {
+        console.log("Perform sync request for user[" + socket.bcoid + "]");
+        return;
+    }
 
     let options = {
-        uri: "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + process.env.GOOGLE_API_KEY,
+        uri: SYNC_REQUEST_URI,
         method: "POST",
         json: {
             agentUserId: socket.bcoid
