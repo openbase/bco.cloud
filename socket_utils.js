@@ -1,5 +1,6 @@
 const socketIO = require('socket.io'); // web socket communication
 const request = require('request'); // do http requests
+const db = require("./db");
 
 const CONNECTION_EVENT = "connection";
 const DISCONNECT_EVENT = "disconnect";
@@ -45,16 +46,36 @@ const initSocket = function (socket) {
     let authenticationTimeout = setTimeout(() => socket.disconnect(true), time);
 
     // add a middleware, which will be executed before everything else;
-    socket.use(socketMiddleware);
+    socket.use(function (packet, next) {
+        // if already logged in go on
+        if (AUTHENTICATED_SOCKETS[socket.bcoid]) {
+            return next();
+        }
+
+        // if not logged in still let login or registration attempts through
+        let eventName = packet[0];
+        if (eventName === LOGIN_EVENT || eventName === REGISTER_EVENT) {
+            return next();
+        }
+
+        // cause error
+        next(new Error("Invalid request without being logged in"))
+    });
 
     // handle login attempts
-    socket.on(LOGIN_EVENT, (data) => {
-        return login(socket, authenticationTimeout, data);
+    socket.on(LOGIN_EVENT, (data, callback) => {
+        if (!callback || typeof callback !== "function") {
+            new Error("Did not receive valid callback[" + callback + "]")
+        }
+        return login(socket, authenticationTimeout, data, callback);
     });
 
     // handle user registration
-    socket.on(REGISTER_EVENT, (data) => {
-        return register(socket, data)
+    socket.on(REGISTER_EVENT, (data, callback) => {
+        if (!callback || typeof callback !== "function") {
+            new Error("Did not receive valid callback[" + callback + "]")
+        }
+        return register(socket, data, callback)
     });
 
     // handle disconnections
@@ -65,25 +86,12 @@ const initSocket = function (socket) {
     });
 
     // handle sync requests
-    socket.on(REQUEST_SYNC_EVENT, function (data) {
-        return requestSync(socket, data);
+    socket.on(REQUEST_SYNC_EVENT, function (data, callback) {
+        if (!callback || typeof callback !== "function") {
+            new Error("Did not receive valid callback[" + callback + "]")
+        }
+        return requestSync(socket, data, callback);
     });
-};
-
-const socketMiddleware = function (packet, next) {
-    // if already logged in go on
-    if (AUTHENTICATED_SOCKETS[socket.bcoid]) {
-        return next();
-    }
-
-    // if not logged in still let login or registration attempts through
-    let eventName = packet[0];
-    if (eventName === LOGIN_EVENT || eventName === REGISTER_EVENT) {
-        return next();
-    }
-
-    // cause error
-    next(new Error("Invalid request without being logged in"))
 };
 
 const ACCESS_TOKEN_KEY = "accessToken";
@@ -92,17 +100,7 @@ const PASSWORD_HASH_KEY = "password_hash";
 const PASSWORD_SALT_KEY = "password_salt";
 const USERNAME_KEY = "username";
 
-const login = async function (socket, authenticationTimeout, data) {
-    // the last argument is a callback which can be used to give feedback to the client
-    // this is only true if the client expects an answer - handle accordingly
-    let callback = arguments[arguments.length - 1];
-
-    if (!callback) {
-        // socket does no expect an answer which is invalid so disconnect and clear timeout
-        socket.disconnect(true);
-        clearTimeout(authenticationTimeout);
-    }
-
+const login = async function (socket, authenticationTimeout, data, callback) {
     // parse received data which should be a json string
     let parsedData = JSON.parse(data);
 
@@ -128,6 +126,7 @@ const login = async function (socket, authenticationTimeout, data) {
             AUTHENTICATED_SOCKETS[socket.bcoid] = socket;
             return callback(JSON.stringify({success: true}));
         } catch (e) {
+            console.log(e.message + ": " + e.stack);
             return callback(JSON.stringify({
                 success: false,
                 error: e.message
@@ -141,16 +140,7 @@ const login = async function (socket, authenticationTimeout, data) {
     }));
 };
 
-const register = async function (socket, data) {
-    // the last argument is a callback which can be used to give feedback to the client
-    // this is only true if the client expects an answer - handle accordingly
-    let callback = arguments[arguments.length - 1];
-
-    if (!callback) {
-        // socket does no expect an answer which is invalid so disconnect and clear timeout
-        socket.disconnect(true);
-    }
-
+const register = async function (socket, data, callback) {
     // parse received data which should be a json string
     let parsedData = JSON.parse(data);
     let username = parsedData[USERNAME_KEY];
@@ -167,7 +157,7 @@ const register = async function (socket, data) {
     try {
         // save user if not already there
         let userId;
-        if (!(await db.isUsernameUsed(username))) {
+        if (!(await db.users.isUsernameUsed(username))) {
             userId = await db.users.save(username, passwordHash, passwordSalt, emailHash);
         } else {
             userId = (await db.users.findByUsername(username)).id;
@@ -188,7 +178,7 @@ const register = async function (socket, data) {
         }
         return callback(JSON.stringify({
             success: true,
-            accessToken: token.token
+            accessToken: token
         }));
     } catch (e) {
         return callback(JSON.stringify({
@@ -201,13 +191,8 @@ const register = async function (socket, data) {
 const SYNC_API_KEY = process.env.GOOGLE_API_KEY;
 const SYNC_REQUEST_URI = "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + SYNC_API_KEY;
 
-const requestSync = function (socket, data) {
+const requestSync = function (socket, data, callback) {
     console.log("Perform request sync");
-
-    // the last argument is a callback which can be used to give feedback to the client
-    // this is only true if the client expects an answer
-    let callback = arguments[arguments.length - 1];
-    //TODO: handle if callback not available
 
     // api key is not defined locally, so if started locally just print a debug message
     if (!SYNC_API_KEY) {
