@@ -111,10 +111,8 @@ const login = async function (socket, authenticationTimeout, data, callback) {
             let tokenData = await db.tokens.findByToken(parsedData[ACCESS_TOKEN_KEY]);
             console.log("Found tokenData: " + JSON.stringify(tokenData) + " for token[" + parsedData[ACCESS_TOKEN_KEY] + "]");
             if (!tokenData || tokenData.client_id !== socket.bcoid) {
-                return callback(JSON.stringify({
-                    success: false,
-                    error: "Invalid access token"
-                }))
+                reportError(callback, new Error("Invalid access token"));
+                return;
             }
             // valid login
             console.log("Received valid token");
@@ -126,18 +124,12 @@ const login = async function (socket, authenticationTimeout, data, callback) {
             AUTHENTICATED_SOCKETS[socket.bcoid] = socket;
             return callback(JSON.stringify({success: true}));
         } catch (e) {
-            console.log(e.message + ": " + e.stack);
-            return callback(JSON.stringify({
-                success: false,
-                error: e.message
-            }))
+            reportError(callback, e);
+            return;
         }
     }
 
-    return callback(JSON.stringify({
-        success: false,
-        error: "Access token missing"
-    }));
+    reportError(callback, new Error("Access token missing"));
 };
 
 const register = async function (socket, data, callback) {
@@ -157,16 +149,15 @@ const register = async function (socket, data, callback) {
     try {
         // save user if not already there
         let userId;
-        if (!(await db.users.isUsernameUsed(username))) {
-            userId = await db.users.save(username, passwordHash, passwordSalt, emailHash);
-        } else {
-            userId = (await db.users.findByUsername(username)).id;
+        if (await db.users.isUsernameUsed(username)) {
+            reportError(callback, new Error("Cannot register user because username[" + username + "] is already used"));
+            return;
         }
+        userId = await db.users.save(username, passwordHash, passwordSalt, emailHash);
         // save bco as client if not already there
         if ((await db.clients.findById(socket.bcoid)) === undefined) {
             await db.clients.save(socket.bcoid, null, null);
         }
-
 
         // create and return access token
         let tokenData = await db.tokens.findByUserClientAndType(db.tokens.TOKEN_TYPE.ACCESS, userId, socket.bcoid);
@@ -181,10 +172,7 @@ const register = async function (socket, data, callback) {
             accessToken: token
         }));
     } catch (e) {
-        return callback(JSON.stringify({
-            success: false,
-            error: e.message
-        }));
+        reportError(callback, e)
     }
 };
 
@@ -213,8 +201,7 @@ const requestSync = function (socket, data, callback) {
     // perform post request
     request(options, (error, response, body) => {
         if (error) {
-            console.log(error + " " + JSON.stringify(body));
-            callback(error);
+            reportError(callback, error);
         } else {
             console.log("RequestSync successful: " + JSON.stringify(body));
         }
@@ -223,6 +210,14 @@ const requestSync = function (socket, data, callback) {
 
 const getSocketByBCOId = function (id) {
     return AUTHENTICATED_SOCKETS[id];
+};
+
+const reportError = function (callback, error) {
+    console.log(error.message + ": " + error.stack);
+    callback(JSON.stringify({
+        success: false,
+        error: error.message
+    }));
 };
 
 module.exports.initSocketIO = initSocketIO;
