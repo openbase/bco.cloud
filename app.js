@@ -107,21 +107,22 @@ app.post('/oauth/token', routes.token);
 
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
-df.intent("register scene", (conv) => {
+df.intent("register_scene", (conv) => {
     console.log("Should now register a scene named[" + conv.parameters["label"] + "] in[" + conv.parameters["location"] + "]");
+    console.log(JSON.stringify(conv, null, 2));
     conv.close("Erledigt.");
 });
-df.intent('favorite color', (conv, {color}) => {
-    console.log(JSON.stringify(conv));
-    conv.close("Your favorite color is [" + color + "]");
+df.intent('user_activity', (conv, {activity}) => {
+    console.log("Should now set user activity");
+    console.log(JSON.stringify(conv, null, 2));
+    conv.close("Du machst gerade " + activity + "");
 });
-df.intent('user-activity', (conv, {activity}) => {
-    conv.close("Du machst gerade [" + activity + "]");
-});
-df.intent('user transit', (conv) => {
+df.intent('user_transit', (conv) => {
+    console.log("Should not set user transit state");
+    console.log(JSON.stringify(conv, null, 2));
     let userTransit = conv.parameters["user-transit"];
     console.log("Received user transit value[" + userTransit + "]");
-    if (socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
+    /*if (socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
             socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b").emit("user transit", userTransit, (response) => {
@@ -136,7 +137,8 @@ df.intent('user transit', (conv) => {
         });
     } else {
         conv.close("Tut mit leid. Aber dein BCO System ist nicht verbunden");
-    }
+    }*/
+    conv.close("Okay");
 });
 
 app.post('/fulfillment/action', df);
