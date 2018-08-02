@@ -165,7 +165,8 @@ df.intent('user_transit', (conv) => {
 
 app.post('/fulfillment/action',
     async function (request, response, next) {
-        console.log("Receive request for action " + JSON.stringify(request.headers));
+        console.log("Receive request for action " + JSON.stringify(request.headers, null, 4));
+        console.log("Receive request for action " + JSON.stringify(request.body, null, 4));
         next();
     },
     // validate authentication via token
