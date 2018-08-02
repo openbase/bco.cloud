@@ -166,7 +166,7 @@ df.intent('user_transit', (conv) => {
 app.post('/fulfillment/action',
     async function (request, response, next) {
         console.log("Receive request for action " + JSON.stringify(request.headers, null, 4));
-        console.log("Receive request for action " + JSON.stringify(request.body.user, null, 4));
+        console.log("Receive request for action " + JSON.stringify(request.body));
         console.log("Found accessToken: " + request.body.user.accessToken);
         request.headers.authorization = "Bearer " + request.body.user.accessToken;
         next();
