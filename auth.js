@@ -49,8 +49,9 @@ passport.deserializeUser(async function (username, done) {
  */
 async function verifyClient(clientId, clientSecret, done) {
     try {
-        client = await db.clients.findById(clientId);
-
+        console.log("Verify client [" + clientId + ", " + clientSecret + "]");
+        let client = await db.clients.findById(clientId);
+        console.log("Secret in db [" + client.secret + "]");
         if (!client) {
             return done(null, false);
         }
