@@ -112,13 +112,14 @@ df.intent("register_scene", (conv) => {
     console.log(JSON.stringify(conv, null, 2));
     conv.close("Erledigt.");
 });
-df.intent('user_activity', (conv, {activity}) => {
+df.intent('user_activity', async (conv, {activity}) => {
     console.log("Should now set user activity");
-    console.log(JSON.stringify(conv));
-    if (socketUtils.getSocketByBCOId("bf9c54f1-6909-4e43-8a58-27001b0faa90@60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
+    let tokenData = await db.tokens.findByToken(conv.user.access.token);
+    let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
+    if (socketUtils.getSocketByBCOId(bcoId)) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
-            socketUtils.getSocketByBCOId("bf9c54f1-6909-4e43-8a58-27001b0faa90@60c11123-6ae7-412e-8b94-25787f3f2f9b").emit("activity", activity, (response) => {
+            socketUtils.getSocketByBCOId(bcoId).emit("activity", activity, (response) => {
                 clearTimeout(timeout);
                 let res = JSON.parse(response);
                 if (res.state === "success") {
@@ -164,34 +165,14 @@ df.intent('user_transit', (conv) => {
 });
 
 app.post('/fulfillment/action',
+    // somehow google only sends its access token in the body of the request
+    // so copy it to the header where passport would expect it for correct authorization
     async function (request, response, next) {
-        console.log("Receive request for action " + JSON.stringify(request.headers, null, 4));
-        console.log("Receive request for action " + JSON.stringify(request.body.originalDetectIntentRequest.payload));
-        console.log("Found accessToken: " + request.body.originalDetectIntentRequest.payload.user.accessToken);
         request.headers.authorization = "Bearer " + request.body.originalDetectIntentRequest.payload.user.accessToken;
         next();
     },
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
-    // send request via web socket and retrieve response
-    async function (request, response, next) {
-        console.log("Received request from google:\n" + JSON.stringify(request.body));
-
-        // parse access token from header
-        let accessToken = request.headers.authorization.replace("Bearer ", "");
-
-        try {
-            let tokenData = await db.tokens.findByToken(accessToken);
-            let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
-            // use the socket with the given bco id
-            console.log("Found bco id for user[" + bcoId + "]");
-        } catch (e) {
-            console.log(e);
-            response.status(400).send(error.message);
-        }
-
-        next();
-    },
     df);
 
 app.post('/fulfillment',
