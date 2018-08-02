@@ -115,7 +115,28 @@ df.intent("register_scene", (conv) => {
 df.intent('user_activity', (conv, {activity}) => {
     console.log("Should now set user activity");
     console.log(JSON.stringify(conv, null, 2));
-    conv.close("Du machst gerade " + activity + "");
+    if (socketUtils.getSocketByBCOId("bf9c54f1-6909-4e43-8a58-27001b0faa90@60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
+        return new Promise(function (resolve, reject) {
+            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
+            socketUtils.getSocketByBCOId("bf9c54f1-6909-4e43-8a58-27001b0faa90@60c11123-6ae7-412e-8b94-25787f3f2f9b").emit("activity", activity, (response) => {
+                clearTimeout(timeout);
+                let res = JSON.parse(response);
+                if (res.state === "success") {
+                    conv.close("Deine Aktivität wurde auf " + res.activity + " gesetzt");
+                } else if (res.state === "error") {
+                    if (res.error === "activity not available") {
+                        conv.close("Ich kann die von die ausgeführte Aktivität " + activity + " nicht finden")
+                    }
+                    conv.close("Entschuldige. Es ist ein Fehler aufgetreten.");
+                } else if (res.state === "pending") {
+                    conv.close("Das System brauch wohl noch ein bisschen um deine Anfrage umzusetzen");
+                }
+                resolve();
+            });
+        });
+    } else {
+        conv.close("Tut mit leid. Aber dein BCO System ist nicht verbunden");
+    }
 });
 df.intent('user_transit', (conv) => {
     console.log("Should not set user transit state");
