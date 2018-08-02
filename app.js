@@ -114,7 +114,7 @@ df.intent("register_scene", (conv) => {
 });
 df.intent('user_activity', (conv, {activity}) => {
     console.log("Should now set user activity");
-    console.log(JSON.stringify(conv, null, 2));
+    console.log(JSON.stringify(conv));
     if (socketUtils.getSocketByBCOId("bf9c54f1-6909-4e43-8a58-27001b0faa90@60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
         return new Promise(function (resolve, reject) {
             let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
@@ -168,7 +168,7 @@ app.post('/fulfillment/action',
         console.log("Receive request for action " + JSON.stringify(request.headers, null, 4));
         console.log("Receive request for action " + JSON.stringify(request.body.originalDetectIntentRequest.payload));
         console.log("Found accessToken: " + request.body.originalDetectIntentRequest.payload.user.accessToken);
-        request.headers.authorization = "Bearer " + request.body.user.accessToken;
+        request.headers.authorization = "Bearer " + request.body.originalDetectIntentRequest.payload.user.accessToken;
         next();
     },
     // validate authentication via token
@@ -195,10 +195,6 @@ app.post('/fulfillment/action',
     df);
 
 app.post('/fulfillment',
-    function(request, response) {
-        console.log(JSON.stringify(request.headers));
-        console.log(JSON.stringify(request.body));
-    },
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
     // send request via web socket and retrieve response
