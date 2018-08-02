@@ -195,6 +195,10 @@ app.post('/fulfillment/action',
     df);
 
 app.post('/fulfillment',
+    function(request, response) {
+        console.log(JSON.stringify(request.headers));
+        console.log(JSON.stringify(request.body));
+    },
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
     // send request via web socket and retrieve response
