@@ -28,6 +28,7 @@ server.deserializeClient(async (id, done) => {
     try {
         done(null, await db.clients.findById(id));
     } catch (e) {
+        console.log(e.message + ": " + e.stackTrace);
         done(e);
     }
 });
@@ -56,6 +57,7 @@ server.grant(oauth2orize.grant.code(async (client, redirectUri, user, ares, done
     try {
         done(null, await db.tokens.generateToken(db.tokens.TOKEN_TYPE.AUTH_CODE, user.id, client.id));
     } catch (e) {
+        console.log(e.message + ": " + e.stackTrace);
         done(e);
     }
 }));
@@ -67,6 +69,7 @@ server.grant(oauth2orize.grant.code(async (client, redirectUri, user, ares, done
 // code.
 server.exchange(oauth2orize.exchange.code(async (client, code, redirectUri, done) => {
     try {
+        console.log("Exchange auth code for access token [" + client.id + ", " + code + "]");
         let authCode = await db.tokens.findByToken(code);
         if (client.id !== authCode.client_id) {
             return done(null, false);
@@ -77,6 +80,7 @@ server.exchange(oauth2orize.exchange.code(async (client, code, redirectUri, done
         console.log("Generates accessToken[" + authCode.user_id + ", " + authCode.clientId + "]");
         done(null, await db.tokens.generateToken(db.tokens.TOKEN_TYPE.ACCESS, authCode.user_id, client.id));
     } catch (e) {
+        console.log(e.message + ": " + e.stackTrace);
         done(e);
     }
 }));
@@ -112,6 +116,7 @@ module.exports.authorization = [
             }
             return done(null, client, redirectUri);
         } catch (e) {
+            console.log(e.message + ": " + e.stackTrace);
             done(e);
         }
     }),
