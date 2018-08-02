@@ -164,10 +164,14 @@ df.intent('user_transit', (conv) => {
 });
 
 app.post('/fulfillment/action',
+    async function (request, response, next) {
+        console.log("Receive request for action " + JSON.stringify(request.headers));
+        next();
+    },
     // validate authentication via token
     passport.authenticate('bearer', {session: false}),
     // send request via web socket and retrieve response
-    async function (request, response) {
+    async function (request, response, next) {
         console.log("Received request from google:\n" + JSON.stringify(request.body));
 
         // parse access token from header
@@ -182,6 +186,8 @@ app.post('/fulfillment/action',
             console.log(e);
             response.status(400).send(error.message);
         }
+
+        next();
     },
     df);
 
