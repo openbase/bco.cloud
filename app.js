@@ -126,8 +126,9 @@ df.intent('user_activity', (conv, {activity}) => {
                 } else if (res.state === "error") {
                     if (res.error === "activity not available") {
                         conv.close("Ich kann die von die ausgeführte Aktivität " + activity + " nicht finden")
+                    } else {
+                        conv.close("Entschuldige. Es ist ein Fehler aufgetreten.");
                     }
-                    conv.close("Entschuldige. Es ist ein Fehler aufgetreten.");
                 } else if (res.state === "pending") {
                     conv.close("Das System brauch wohl noch ein bisschen um deine Anfrage umzusetzen");
                 }
