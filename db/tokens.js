@@ -2,6 +2,8 @@
 const utils = require('../utils');
 // pool used to communicate with the database
 const pool = require('./pool').getPool();
+// validate if a string is a uuid
+const validator = require('validator');
 
 const TOKEN_TYPE = Object.freeze({
     ACCESS: "ACCESS",
@@ -59,6 +61,30 @@ const findByClient = async function (clientId) {
     return (await pool.query(FIND_BY_CLIENT_QUERY, [clientId])).rows;
 };
 
+const FIND_BY_USER_QUERY = "SELECT * FROM tokens WHERE user_id = $1";
+const findByUser = async function (userId) {
+    return (await pool.query(FIND_BY_USER_QUERY, [userId])).rows;
+};
+
+const findBCOIdForUser = async function (userId) {
+    let rows = await findByUser(userId);
+    let id = undefined;
+    for (let i = 0; i < rows.length; i++) {
+        let row = rows[i];
+        let split = row.client_id.split("@");
+        if (split.length === 2 && validator.isUUID(split[0]) && validator.isUUID(split[1])) {
+            if (id !== undefined) {
+                throw new Error("Found more than one BCO id[" + id + ", " + row.client_id + "] for user[" + userId + "]");
+            }
+            id = row.client_id;
+        }
+    }
+    if (id === undefined) {
+        throw new Error("BCO id not available for user[" + userId + "]");
+    }
+    return id;
+};
+
 const DELETE_TOKEN_QUERY = "DELETE FROM tokens WHERE token = $1";
 const deleteToken = async function (token) {
     await pool.query(DELETE_TOKEN_QUERY, [token]);
@@ -72,3 +98,5 @@ module.exports.findByUserClientAndType = findByUserClientAndType;
 module.exports.findByUserAndNotClient = findByUserAndNotClient;
 module.exports.deleteToken = deleteToken;
 module.exports.findByClient = findByClient;
+module.exports.findByUser = findByUser;
+module.exports.findBCOIdForUser = findBCOIdForUser;

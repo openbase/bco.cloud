@@ -163,7 +163,27 @@ df.intent('user_transit', (conv) => {
     conv.close("Okay");
 });
 
-app.post('/fulfillment/action', df);
+app.post('/fulfillment/action',
+    // validate authentication via token
+    passport.authenticate('bearer', {session: false}),
+    // send request via web socket and retrieve response
+    async function (request, response) {
+        console.log("Received request from google:\n" + JSON.stringify(request.body));
+
+        // parse access token from header
+        let accessToken = request.headers.authorization.replace("Bearer ", "");
+
+        try {
+            let tokenData = await db.tokens.findByToken(accessToken);
+            let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
+            // use the socket with the given bco id
+            console.log("Found bco id for user[" + bcoId + "]");
+        } catch (e) {
+            console.log(e);
+            response.status(400).send(error.message);
+        }
+    },
+    df);
 
 app.post('/fulfillment',
     // validate authentication via token
@@ -177,13 +197,13 @@ app.post('/fulfillment',
 
         try {
             let tokenData = await db.tokens.findByToken(accessToken);
-            let data = await db.tokens.findByUserAndNotClient(tokenData.user_id, tokenData.client_id);
+            let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
             // use the socket with the given bco id
-            if (!socketUtils.getSocketByBCOId(data.client_id)) {
-                console.log("Ignore request because user[" + data.client_id + "] is currently not connected");
+            if (!socketUtils.getSocketByBCOId(bcoId)) {
+                console.log("Ignore request because user[" + bcoId + "] is currently not connected");
                 response.status(400).send("The requested client is currently not connected");
             } else {
-                socketUtils.getSocketByBCOId(data.client_id).send(JSON.stringify(request.body), (data) => {
+                socketUtils.getSocketByBCOId(bcoId).send(JSON.stringify(request.body), (data) => {
                     response.set('Content-Type', 'application/json');
                     response.send(data);
                 });
