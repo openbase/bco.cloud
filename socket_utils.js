@@ -87,7 +87,8 @@ const initSocket = function (socket) {
 
     // handle sync requests
     socket.on(REQUEST_SYNC_EVENT, function (data, callback) {
-        if (!callback || typeof callback !== "function") {
+        console.log("Request sync: [" + callback + ", " + (typeof callback) + "]");
+        if (!callback || (typeof callback) !== "function") {
             new Error("Did not receive valid callback[" + callback + "]")
         }
         return requestSync(socket, data, callback);
