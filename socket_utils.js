@@ -211,8 +211,10 @@ const requestSync = function (socket, callback) {
         } else {
             if (body.error) {
                 reportError(callback, new Error(body.error.code + ": " + body.error.message))
+            } else {
+                console.log("RequestSync successful: " + JSON.stringify(body));
+                callback(JSON.stringify({success: true}));
             }
-            console.log("RequestSync successful: " + JSON.stringify(body));
         }
     });
 };
