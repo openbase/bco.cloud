@@ -105,63 +105,32 @@ app.get('/auth', routes.authorization);
 app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
+const INTENT_REGISTER_SCENE = "register_scene";
+const INTENT_USER_ACTIVITY = "user_activity";
+const INTENT_USER_TRANSIT = "user_transit";
+
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
-df.intent("register_scene", (conv) => {
-    console.log("Should now register a scene named[" + conv.parameters["label"] + "] in[" + conv.parameters["location"] + "]");
-    console.log(JSON.stringify(conv, null, 2));
-    conv.close("Erledigt.");
+df.intent(INTENT_REGISTER_SCENE, (conversation) => {
+    conversation.ask("Wo soll die Szene registriert werden?")
+    // let argument = {};
+    // if (conversation.parameters.label) {
+    //     argument.label = conversation.parameters.label;
+    // }
+    // if (conversation.parameters.location) {
+    //     argument.location = conversation.parameters.location;
+    // }
+    // return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
 });
-df.intent('user_activity', async (conv, {activity}) => {
-    console.log("Should now set user activity");
-    let tokenData = await db.tokens.findByToken(conv.user.access.token);
-    let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
-    if (socketUtils.getSocketByBCOId(bcoId)) {
-        return new Promise(function (resolve, reject) {
-            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
-            socketUtils.getSocketByBCOId(bcoId).emit("activity", activity, (response) => {
-                clearTimeout(timeout);
-                let res = JSON.parse(response);
-                if (res.state === "success") {
-                    conv.close("Deine Aktivität wurde auf " + res.activity + " gesetzt");
-                } else if (res.state === "error") {
-                    if (res.error === "activity not available") {
-                        conv.close("Ich kann die von die ausgeführte Aktivität " + activity + " nicht finden")
-                    } else {
-                        conv.close("Entschuldige. Es ist ein Fehler aufgetreten.");
-                    }
-                } else if (res.state === "pending") {
-                    conv.close("Das System brauch wohl noch ein bisschen um deine Anfrage umzusetzen");
-                }
-                resolve();
-            });
-        });
-    } else {
-        conv.close("Tut mit leid. Aber dein BCO System ist nicht verbunden");
-    }
+df.intent(INTENT_USER_ACTIVITY, async (conversation, {activity}) => {
+    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, activity);
 });
-df.intent('user_transit', (conv) => {
-    console.log("Should not set user transit state");
-    console.log(JSON.stringify(conv, null, 2));
-    let userTransit = conv.parameters["user-transit"];
-    console.log("Received user transit value[" + userTransit + "]");
-    /*if (socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b")) {
-        return new Promise(function (resolve, reject) {
-            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
-            socketUtils.getSocketByBCOId("60c11123-6ae7-412e-8b94-25787f3f2f9b").emit("user transit", userTransit, (response) => {
-                clearTimeout(timeout);
-                if (response === "SUCCESS") {
-                    conv.close("Alles klar");
-                } else {
-                    conv.close("Ein Fehler ist aufgetreten");
-                }
-                resolve();
-            });
-        });
-    } else {
-        conv.close("Tut mit leid. Aber dein BCO System ist nicht verbunden");
-    }*/
-    conv.close("Okay");
+df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
+    return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, userTransit);
+});
+df.intent('actions.intent.TEXT', (conversation, input) => {
+    console.log("Received input [" + input + "]");
+    conversation.end("Okay")
 });
 
 app.post('/fulfillment/action',

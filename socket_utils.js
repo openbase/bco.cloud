@@ -203,9 +203,32 @@ const requestSync = function (socket, data, callback) {
         if (error) {
             reportError(callback, error);
         } else {
+            if (body.error) {
+                reportError(callback, new Error(body.error.code + ": " + body.error.message))
+            }
             console.log("RequestSync successful: " + JSON.stringify(body));
         }
     });
+};
+
+const UNCONNECTED_ANSWER = "Base Cube One ist nicht mit der Cloud verbunden.";
+const handleAction = async function (conversation, intent, argument) {
+    console.log("Handle intent[" + intent + "] with argument[" + JSON.stringify(argument) + "]");
+    let tokenData = await db.tokens.findByToken(conversation.user.access.token);
+    let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
+    let socket = getSocketByBCOId(bcoId);
+    if (socket) {
+        return new Promise(function (resolve, reject) {
+            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
+            socket.emit(intent, argument, (response) => {
+                clearTimeout(timeout);
+                conversation.close(response);
+                resolve();
+            });
+        });
+    } else {
+        conversation.close(UNCONNECTED_ANSWER)
+    }
 };
 
 const getSocketByBCOId = function (id) {
@@ -222,3 +245,4 @@ const reportError = function (callback, error) {
 
 module.exports.initSocketIO = initSocketIO;
 module.exports.getSocketByBCOId = getSocketByBCOId;
+module.exports.handleAction = handleAction;
