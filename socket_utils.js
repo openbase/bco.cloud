@@ -65,7 +65,7 @@ const initSocket = function (socket) {
     // handle login attempts
     socket.on(LOGIN_EVENT, (data, callback) => {
         if (!callback || typeof callback !== "function") {
-            new Error("Did not receive valid callback[" + callback + "]")
+            return new Error("Did not receive valid callback[" + callback + "]")
         }
         return login(socket, authenticationTimeout, data, callback);
     });
@@ -73,7 +73,7 @@ const initSocket = function (socket) {
     // handle user registration
     socket.on(REGISTER_EVENT, (data, callback) => {
         if (!callback || typeof callback !== "function") {
-            new Error("Did not receive valid callback[" + callback + "]")
+            return new Error("Did not receive valid callback[" + callback + "]")
         }
         return register(socket, data, callback)
     });
@@ -87,9 +87,9 @@ const initSocket = function (socket) {
 
     // handle sync requests
     socket.on(REQUEST_SYNC_EVENT, function (data, callback) {
-        console.log("Request sync: [" + callback + ", " + (typeof callback) + "]");
+        console.log("Request sync: [" + !callback + ", " + (typeof callback) !== "function" + "]");
         if (!callback || (typeof callback) !== "function") {
-            new Error("Did not receive valid callback[" + callback + "]")
+            return new Error("Did not receive valid callback[" + callback + "]")
         }
         return requestSync(socket, data, callback);
     });
