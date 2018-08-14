@@ -65,7 +65,9 @@ const initSocket = function (socket) {
     // handle login attempts
     socket.on(LOGIN_EVENT, (data, callback) => {
         if (!callback || typeof callback !== "function") {
-            return new Error("Did not receive valid callback[" + callback + "]")
+            let error = new Error("Did not receive valid callback[" + callback + "]");
+            console.log("Error on login: " + error);
+            return error;
         }
         return login(socket, authenticationTimeout, data, callback);
     });
@@ -73,7 +75,9 @@ const initSocket = function (socket) {
     // handle user registration
     socket.on(REGISTER_EVENT, (data, callback) => {
         if (!callback || typeof callback !== "function") {
-            return new Error("Did not receive valid callback[" + callback + "]")
+            let error = new Error("Did not receive valid callback[" + callback + "]");
+            console.log("Error on register: " + error);
+            return error;
         }
         return register(socket, data, callback)
     });
@@ -86,12 +90,13 @@ const initSocket = function (socket) {
     });
 
     // handle sync requests
-    socket.on(REQUEST_SYNC_EVENT, function (data, callback) {
-        console.log("Request sync: [" + !callback + ", " + (typeof callback) !== "function" + "]");
+    socket.on(REQUEST_SYNC_EVENT, function (callback) {
         if (!callback || (typeof callback) !== "function") {
-            return new Error("Did not receive valid callback[" + callback + "]")
+            let error = new Error("Did not receive valid callback[" + callback + "]");
+            console.log("Error on request sync: " + error);
+            return error;
         }
-        return requestSync(socket, data, callback);
+        return requestSync(socket, callback);
     });
 };
 
@@ -180,7 +185,7 @@ const register = async function (socket, data, callback) {
 const SYNC_API_KEY = process.env.GOOGLE_API_KEY;
 const SYNC_REQUEST_URI = "https://homegraph.googleapis.com/v1/devices:requestSync?key=" + SYNC_API_KEY;
 
-const requestSync = function (socket, data, callback) {
+const requestSync = function (socket, callback) {
     console.log("Perform request sync");
 
     // api key is not defined locally, so if started locally just print a debug message
