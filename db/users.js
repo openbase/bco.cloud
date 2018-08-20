@@ -42,7 +42,7 @@ const findById = async function (id) {
 
 const DELETE_BY_ID_QUERY = "DELETE FROM users WHERE users.id = $1";
 const deleteById = async function (id) {
-    await pool.query(FIND_BY_ID_QUERY, [id]);
+    await pool.query(DELETE_BY_ID_QUERY, [id]);
 };
 
 

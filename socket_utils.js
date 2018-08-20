@@ -235,7 +235,6 @@ const remove = async function (socket, callback) {
 
     // this function can only be used when already logged in and removes the currently logged in client and
     // all the data belonging to the user using it
-
     try {
         // find user account for belonging to the socket connections
         let userId = (await db.tokens.findByClient(socket.bcoid))[0].user_id;
@@ -244,7 +243,7 @@ const remove = async function (socket, callback) {
         console.log("Found tokens: " + JSON.stringify(rows));
         // delete all token for the user (including the one for the bco client)
         for (let i = 0; i < rows.length; i++) {
-            console.log("Remove token: " + JSON.stringify(rows[i]));
+            console.log("Remove token: " + JSON.stringify(rows[i]).token);
             await db.tokens.deleteToken(rows[i].token)
         }
         // delete the bco client
