@@ -239,8 +239,11 @@ const remove = async function (socket, callback) {
     try {
         // find user account for belonging to the socket connections
         let userId = (await db.tokens.findByClient(socket.bcoid))[0].user_id;
+        console.log("Found user [" + userId + "]");
+        let rows = await db.tokens.findByUser(userId);
+        console.log("Found tokens: " + JSON.stringify(rows));
         // delete all token for the user (including the one for the bco client)
-        for (let tokenRow in db.tokens.findByUser(userId)) {
+        for (let tokenRow in rows) {
             console.log("Remove token: " + JSON.stringify(tokenRow));
             await db.tokens.deleteToken(tokenRow.token)
         }
