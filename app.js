@@ -136,6 +136,7 @@ app.post('/fulfillment/action',
     // somehow google only sends its access token in the body of the request
     // so copy it to the header where passport would expect it for correct authorization
     async function (request, response, next) {
+        console.log(JSON.stringify(request.body));
         request.headers.authorization = "Bearer " + request.body.originalDetectIntentRequest.payload.user.accessToken;
         next();
     },

@@ -261,13 +261,13 @@ const remove = async function (socket, callback) {
 
 const UNCONNECTED_ANSWER = "Base Cube One ist nicht mit der Cloud verbunden.";
 const handleAction = async function (conversation, intent, argument) {
-    console.log("Handle intent[" + intent + "] with argument[" + JSON.stringify(argument) + "]");
     let tokenData = await db.tokens.findByToken(conversation.user.access.token);
     let bcoId = await db.tokens.findBCOIdForUser(tokenData.user_id);
+    console.log("Handle intent[" + intent + "] with argument[" + JSON.stringify(argument) + "] for user[" + tokenData.user_id + ", " + bcoId + "]");
     let socket = getSocketByBCOId(bcoId);
     if (socket) {
         return new Promise(function (resolve, reject) {
-            let timeout = setTimeout(() => reject(new Error("Timeout")), 3000);
+            let timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
             socket.emit(intent, argument, (response) => {
                 clearTimeout(timeout);
                 conversation.close(response);
