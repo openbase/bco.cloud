@@ -11,5 +11,11 @@ const findById = async function (id) {
     return (await pool.query(FIND_BY_ID_QUERY, [id])).rows[0];
 };
 
+const DELETE_BY_ID_QUERY = "DELETE FROM clients WHERE clients.id = $1";
+const deleteById = async function (id) {
+    await pool.query(DELETE_BY_ID_QUERY, [id]);
+};
+
 module.exports.save = save;
 module.exports.findById = findById;
+module.exports.deleteById = deleteById;

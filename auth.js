@@ -72,7 +72,7 @@ passport.use(new ClientPasswordStrategy(verifyClient));
 
 
 passport.use(new BearerStrategy(async function (accessToken, done) {
-        console.log("Authenticate with accessToken[" + accessToken + "]");
+        //console.log("Authenticate with accessToken[" + accessToken + "]");
         try {
             let token = await db.tokens.findByToken(accessToken);
             if (!token) {

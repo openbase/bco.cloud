@@ -6,6 +6,7 @@ const CONNECTION_EVENT = "connection";
 const DISCONNECT_EVENT = "disconnect";
 const LOGIN_EVENT = "login";
 const REGISTER_EVENT = "register";
+const REMOVE_EVENT = "remove";
 const REQUEST_SYNC_EVENT = "requestSync";
 
 const HEADER_BCO_ID_KEY = "id";
@@ -97,6 +98,16 @@ const initSocket = function (socket) {
             return error;
         }
         return requestSync(socket, callback);
+    });
+
+    // handle remove requests
+    socket.on(REMOVE_EVENT, function (callback) {
+        if (!callback || (typeof callback) !== "function") {
+            let error = new Error("Did not receive valid callback[" + callback + "]");
+            console.log("Error on remove: " + error);
+            return error;
+        }
+        return remove(socket, callback);
     });
 };
 
@@ -217,6 +228,33 @@ const requestSync = function (socket, callback) {
             }
         }
     });
+};
+
+const remove = async function (socket, callback) {
+    console.log("Perform remove request");
+
+    // this function can only be used when already logged in and removes the currently logged in client and
+    // all the data belonging to the user using it
+
+    try {
+        // find user account for belonging to the socket connections
+        let userId = (await db.tokens.findByClient(socket.bcoid))[0].user_id;
+        // delete all token for the user (including the one for the bco client)
+        for (let tokenRow in db.tokens.findByUser(userId)) {
+            console.log("Remove token: " + JSON.stringify(tokenRow));
+            await db.tokens.deleteToken(tokenRow.token)
+        }
+        // delete the bco client
+        console.log("Delete client [" + socket.bcoid + "]");
+        await db.clients.deleteById(socket.bcoid);
+        // delete the user
+        console.log("Delete user [" + userId + "]");
+        await db.users.deleteById(userId);
+        // report success
+        callback(JSON.stringify({success: true}));
+    } catch (e) {
+        reportError(callback, e);
+    }
 };
 
 const UNCONNECTED_ANSWER = "Base Cube One ist nicht mit der Cloud verbunden.";

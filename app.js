@@ -112,15 +112,14 @@ const INTENT_USER_TRANSIT = "user_transit";
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
 df.intent(INTENT_REGISTER_SCENE, (conversation) => {
-    conversation.ask("Wo soll die Szene registriert werden?")
-    // let argument = {};
-    // if (conversation.parameters.label) {
-    //     argument.label = conversation.parameters.label;
-    // }
-    // if (conversation.parameters.location) {
-    //     argument.location = conversation.parameters.location;
-    // }
-    // return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
+    let argument = {};
+    if (conversation.parameters.label) {
+        argument.label = conversation.parameters.label;
+    }
+    if (conversation.parameters.location) {
+        argument.location = conversation.parameters.location;
+    }
+    return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
 });
 df.intent(INTENT_USER_ACTIVITY, async (conversation, {activity}) => {
     return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, activity);
