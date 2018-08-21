@@ -274,7 +274,7 @@ const handleAction = async function (conversation, intent, argument) {
             socket.emit(intent, argument, (response) => {
                 console.log("BCO answered with response[" + response + "]");
                 clearTimeout(timeout);
-                conversation.close(response);
+                conversation.ask(response);
                 resolve();
             });
         });
