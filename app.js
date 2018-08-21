@@ -121,8 +121,21 @@ df.intent(INTENT_REGISTER_SCENE, (conversation) => {
     }
     return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
 });
-df.intent(INTENT_USER_ACTIVITY, async (conversation, {activity}) => {
-    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, activity);
+df.intent(INTENT_USER_ACTIVITY, async (conversation) => {
+    console.log(JSON.stringify(conversation.parameters));
+    let arguments = {};
+    if (conversation.parameters.activity) {
+        arguments.activity = conversation.parameters.activity;
+    }
+    if (conversation.parameters.cancellation) {
+        arguments.cancel = true;
+    } else {
+        arguments.cancel = false;
+    }
+    if (conversation.parameters.location) {
+        arguments.location = conversation.parameters.location;
+    }
+    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
 });
 df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
     return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, userTransit);
@@ -136,7 +149,6 @@ app.post('/fulfillment/action',
     // somehow google only sends its access token in the body of the request
     // so copy it to the header where passport would expect it for correct authorization
     async function (request, response, next) {
-        console.log(JSON.stringify(request.body));
         request.headers.authorization = "Bearer " + request.body.originalDetectIntentRequest.payload.user.accessToken;
         next();
     },
