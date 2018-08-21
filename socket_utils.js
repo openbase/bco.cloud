@@ -267,8 +267,12 @@ const handleAction = async function (conversation, intent, argument) {
     let socket = getSocketByBCOId(bcoId);
     if (socket) {
         return new Promise(function (resolve, reject) {
-            let timeout = setTimeout(() => reject(new Error("Timeout")), 10000);
+            let timeout = setTimeout(() => {
+                console.log("Timeout during action invocation");
+                reject(new Error("Timeout"));
+            }, 10000);
             socket.emit(intent, argument, (response) => {
+                console.log("BCO answered with response[" + response + "]");
                 clearTimeout(timeout);
                 conversation.close(response);
                 resolve();
