@@ -107,6 +107,7 @@ app.post('/oauth/token', routes.token);
 
 const INTENT_REGISTER_SCENE = "register_scene";
 const INTENT_USER_ACTIVITY = "user_activity";
+const INTENT_USER_ACTIVITY_CANCELLATION = "user_activity_cancellation";
 const INTENT_USER_TRANSIT = "user_transit";
 
 const {dialogflow} = require('actions-on-google');
@@ -126,14 +127,21 @@ df.intent(INTENT_USER_ACTIVITY, async (conversation) => {
     let arguments = {};
     if (conversation.parameters.activity) {
         arguments.activity = conversation.parameters.activity;
-    }
-    if (conversation.parameters.cancellation) {
-        arguments.cancel = true;
     } else {
-        arguments.cancel = false;
+        arguments.activity = [];
     }
     if (conversation.parameters.location) {
         arguments.location = conversation.parameters.location;
+    }
+    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+});
+df.intent(INTENT_USER_ACTIVITY_CANCELLATION, async (conversation) => {
+    console.log(JSON.stringify(conversation.parameters));
+    let arguments = {};
+    if (conversation.parameters.activity) {
+        arguments.activity = conversation.parameters.activity;
+    } else {
+        arguments.activity = [];
     }
     return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
 });
