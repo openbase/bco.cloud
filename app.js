@@ -106,6 +106,7 @@ app.post('/auth/decision', routes.decision);
 app.post('/oauth/token', routes.token);
 
 const INTENT_REGISTER_SCENE = "register_scene";
+const INTENT_UPDATE_CONFIG = "update_config";
 const INTENT_USER_ACTIVITY = "user_activity";
 const INTENT_USER_ACTIVITY_CANCELLATION = "user_activity_cancellation";
 const INTENT_USER_TRANSIT = "user_transit";
@@ -144,6 +145,21 @@ df.intent(INTENT_USER_ACTIVITY_CANCELLATION, async (conversation) => {
         arguments.activity = [];
     }
     return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+});
+df.intent(INTENT_UPDATE_CONFIG, async (conversation, {labelCurrent}) => {
+    console.log(JSON.stringify(conversation.parameters));
+    let arguments = {};
+    arguments.labelCurrent = labelCurrent;
+    if(conversation.parameters.locationCurrent) {
+        arguments.locationCurrent = conversation.parameters.locationCurrent;
+    }
+    if(conversation.parameters.labelNew) {
+        arguments.labelNew = conversation.parameters.labelNew;
+    }
+    if(conversation.parameters.locationNew) {
+        arguments.locationNew = conversation.parameters.locationNew;
+    }
+    return socketUtils.handleAction(conversation, INTENT_UPDATE_CONFIG, arguments);
 });
 df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
     return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, userTransit);
