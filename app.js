@@ -158,7 +158,6 @@ df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => 
     return socketUtils.handleAction(conversation, INTENT_RELOCATE, arguments);
 });
 df.intent(INTENT_RENAME, async (conversation, {labelCurrent, labelNew}) => {
-    console.log(JSON.stringify(conversation));
     console.log(JSON.stringify(conversation.parameters));
     let arguments = {};
     arguments.labelCurrent = labelCurrent;
