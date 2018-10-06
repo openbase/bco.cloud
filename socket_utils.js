@@ -272,8 +272,8 @@ const handleAction = async function (conversation, intent, argument) {
                 reject(new Error("Timeout"));
             }, 10000);
             socket.emit(intent, argument, (response) => {
-                console.log("BCO answered with response[" + JSON.stringify(response) + "]");
-                let responseText = response['text'];
+                console.log("BCO answered with response[" + response + "]");
+                let responseText = JSON.parse(response).text;
                 clearTimeout(timeout);
                 if (response.error) {
                     console.log("Tell about error: " + responseText);
