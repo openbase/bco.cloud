@@ -275,8 +275,10 @@ const handleAction = async function (conversation, intent, argument) {
                 console.log("BCO answered with response[" + JSON.stringify(response) + "]");
                 clearTimeout(timeout);
                 if (response.error) {
+                    console.log("Tell about error: " + response.text);
                     conversation.ask(response.text);
                 } else {
+                    console.log("End with feedback: " + response.text);
                     conversation.close(response.text);
                 }
                 resolve();
