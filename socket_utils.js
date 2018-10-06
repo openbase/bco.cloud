@@ -272,10 +272,13 @@ const handleAction = async function (conversation, intent, argument) {
                 reject(new Error("Timeout"));
             }, 10000);
             socket.emit(intent, argument, (response) => {
-                console.log("BCO answered with response[" + response + "]");
+                console.log("BCO answered with response[" + JSON.stringify(response) + "]");
                 clearTimeout(timeout);
-                conversation.ask(response);
-                // conversation.close(response);
+                if (response.error) {
+                    conversation.ask(response.text);
+                } else {
+                    conversation.close(response.text);
+                }
                 resolve();
             });
         });
