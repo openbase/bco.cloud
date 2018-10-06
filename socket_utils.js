@@ -273,13 +273,14 @@ const handleAction = async function (conversation, intent, argument) {
             }, 10000);
             socket.emit(intent, argument, (response) => {
                 console.log("BCO answered with response[" + JSON.stringify(response) + "]");
+                let responseText = response['text'];
                 clearTimeout(timeout);
                 if (response.error) {
-                    console.log("Tell about error: " + response.text);
-                    conversation.ask(response.text);
+                    console.log("Tell about error: " + responseText);
+                    conversation.ask(responseText);
                 } else {
-                    console.log("End with feedback: " + response.text);
-                    conversation.close(response.text);
+                    console.log("End with feedback: " + responseText);
+                    conversation.close(responseText);
                 }
                 resolve();
             });
