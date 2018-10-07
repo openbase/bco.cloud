@@ -273,9 +273,10 @@ const handleAction = async function (conversation, intent, argument) {
             }, 10000);
             socket.emit(intent, argument, (response) => {
                 console.log("BCO answered with response[" + response + "]");
-                let responseText = JSON.parse(response).text;
+                let responseParsed = JSON.parse(response);
+                let responseText = responseParsed.text;
                 clearTimeout(timeout);
-                if (response.error) {
+                if (responseParsed.error) {
                     console.log("Tell about error: " + responseText);
                     conversation.ask(responseText);
                 } else {
