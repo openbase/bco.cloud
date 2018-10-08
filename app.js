@@ -158,7 +158,7 @@ df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => 
     //     arguments.locationCurrent = conversation.parameters.locationCurrent;
     // }
     // return socketUtils.handleAction(conversation, INTENT_RELOCATE, arguments);
-    return socketUtils.handleAction(conversation, INTENT_RELOCATE, ["labelCurrent, labelNew"]);
+    return socketUtils.handleAction(conversation, INTENT_RELOCATE, ["labelCurrent", "locationCurrent", "locationNew"]);
 });
 df.intent(INTENT_RENAME, async (conversation) => {
 // df.intent(INTENT_RENAME, async (conversation, {labelCurrent, labelNew}) => {
@@ -169,7 +169,7 @@ df.intent(INTENT_RENAME, async (conversation) => {
 //         arguments.locationCurrent = conversation.parameters.locationCurrent;
 //     }
 //     return socketUtils.handleAction(conversation, INTENT_RENAME, arguments);
-    return socketUtils.handleAction(conversation, INTENT_RENAME, ["labelCurrent", "labelNew"]);
+    return socketUtils.handleAction(conversation, INTENT_RENAME, ["labelCurrent", "labelNew", "locationCurrent"]);
 });
 df.intent(INTENT_USER_TRANSIT, async (conversation) => {
 // df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
