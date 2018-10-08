@@ -115,60 +115,65 @@ const INTENT_USER_TRANSIT = "user_transit";
 const {dialogflow} = require('actions-on-google');
 const df = dialogflow();
 df.intent(INTENT_REGISTER_SCENE, (conversation) => {
-    let argument = {};
-    if (conversation.parameters.label) {
-        argument.label = conversation.parameters.label;
-    }
-    if (conversation.parameters.location) {
-        argument.location = conversation.parameters.location;
-    }
-    return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
+    // let argument = {};
+    // if (conversation.parameters.label) {
+    //     argument.label = conversation.parameters.label;
+    // }
+    // if (conversation.parameters.location) {
+    //     argument.location = conversation.parameters.location;
+    // }
+    // return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, JSON.stringify(argument));
+    return socketUtils.handleAction(conversation, INTENT_REGISTER_SCENE, ["label", "location"]);
 });
 df.intent(INTENT_USER_ACTIVITY, async (conversation) => {
-    console.log(JSON.stringify(conversation.parameters));
-    let arguments = {};
-    if (conversation.parameters.activity) {
-        arguments.activity = conversation.parameters.activity;
-    } else {
-        arguments.activity = [];
-    }
-    if (conversation.parameters.location) {
-        arguments.location = conversation.parameters.location;
-    }
-    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+    // let arguments = {};
+    // if (conversation.parameters.activity) {
+    //     arguments.activity = conversation.parameters.activity;
+    // } else {
+    //     arguments.activity = [];
+    // }
+    // if (conversation.parameters.location) {
+    //     arguments.location = conversation.parameters.location;
+    // }
+    // return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, ["activity", "location"]);
 });
 df.intent(INTENT_USER_ACTIVITY_CANCELLATION, async (conversation) => {
-    console.log(JSON.stringify(conversation.parameters));
-    let arguments = {};
-    if (conversation.parameters.activity) {
-        arguments.activity = conversation.parameters.activity;
-    } else {
-        arguments.activity = [];
-    }
-    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+    // let arguments = {};
+    // if (conversation.parameters.activity) {
+    //     arguments.activity = conversation.parameters.activity;
+    // } else {
+    //     arguments.activity = [];
+    // }
+    // return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
+    return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, ["activity"]);
 });
-df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => {
-    console.log(JSON.stringify(conversation.parameters));
-    let arguments = {};
-    arguments.labelCurrent = labelCurrent;
-    arguments.locationNew = locationNew;
-    if (conversation.parameters.locationCurrent) {
-        arguments.locationCurrent = conversation.parameters.locationCurrent;
-    }
-    return socketUtils.handleAction(conversation, INTENT_RELOCATE, arguments);
+df.intent(INTENT_RELOCATE, async (conversation) => {
+// df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => {
+    // let arguments = {};
+    // arguments.labelCurrent = labelCurrent;
+    // arguments.locationNew = locationNew;
+    // if (conversation.parameters.locationCurrent) {
+    //     arguments.locationCurrent = conversation.parameters.locationCurrent;
+    // }
+    // return socketUtils.handleAction(conversation, INTENT_RELOCATE, arguments);
+    return socketUtils.handleAction(conversation, INTENT_RELOCATE, ["labelCurrent, labelNew"]);
 });
-df.intent(INTENT_RENAME, async (conversation, {labelCurrent, labelNew}) => {
-    console.log(JSON.stringify(conversation.parameters));
-    let arguments = {};
-    arguments.labelCurrent = labelCurrent;
-    arguments.labelNew = labelNew;
-    if (conversation.parameters.locationCurrent) {
-        arguments.locationCurrent = conversation.parameters.locationCurrent;
-    }
-    return socketUtils.handleAction(conversation, INTENT_RENAME, arguments);
+df.intent(INTENT_RENAME, async (conversation) => {
+// df.intent(INTENT_RENAME, async (conversation, {labelCurrent, labelNew}) => {
+//     let arguments = {};
+//     arguments.labelCurrent = labelCurrent;
+//     arguments.labelNew = labelNew;
+//     if (conversation.parameters.locationCurrent) {
+//         arguments.locationCurrent = conversation.parameters.locationCurrent;
+//     }
+//     return socketUtils.handleAction(conversation, INTENT_RENAME, arguments);
+    return socketUtils.handleAction(conversation, INTENT_RENAME, ["labelCurrent", "labelNew"]);
 });
-df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
-    return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, userTransit);
+df.intent(INTENT_USER_TRANSIT, async (conversation) => {
+// df.intent(INTENT_USER_TRANSIT, async (conversation, {userTransit}) => {
+//     return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, userTransit);
+    return socketUtils.handleAction(conversation, INTENT_USER_TRANSIT, ["userTransit"]);
 });
 df.intent('actions.intent.TEXT', (conversation, input) => {
     console.log("Received input [" + input + "]");
