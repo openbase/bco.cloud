@@ -148,8 +148,9 @@ df.intent(INTENT_USER_ACTIVITY_CANCELLATION, async (conversation) => {
     // return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, arguments);
     return socketUtils.handleAction(conversation, INTENT_USER_ACTIVITY, ["activity"]);
 });
-df.intent(INTENT_RELOCATE, async (conversation) => {
-// df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => {
+// df.intent(INTENT_RELOCATE, async (conversation) => {
+df.intent(INTENT_RELOCATE, async (conversation, {labelCurrent, locationNew}) => {
+    console.log("Conversation params: " + JSON.stringify(conversation.parameters) + ", labelCurrent: " + labelCurrent + ", locationNew: " + locationNew);
     // let arguments = {};
     // arguments.labelCurrent = labelCurrent;
     // arguments.locationNew = locationNew;
