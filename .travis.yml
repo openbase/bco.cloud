@@ -1,7 +1,5 @@
 language: node_js
 
-dist: xenial
-
 branches:
   except:
       #- /^(?i:feature)-.*$/
