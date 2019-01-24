@@ -1,14 +1,14 @@
 {
   "name": "bcocloud",
   "version": "1.0.0",
-  "description": "",
+  "description": "BCO Cloud Server",
   "main": "app.js",
   "engines": {
     "node": "10.1.0"
   },
   "scripts": {
     "start": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/mochA"
   },
   "author": "Tamino Huxohl",
   "license": "GPL-3.0-only",
@@ -36,10 +36,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openbase/bco.cloud.git"
+    "url": "git+https://github.com/openbase/bco.cloud.git"
   },
   "keywords": [
     "node",
     "express"
-  ]
+  ],
+  "bugs": {
+    "url": "https://github.com/openbase/bco.cloud/issues"
+  },
+  "homepage": "https://github.com/openbase/bco.cloud#readme",
+  "directories": {
+    "test": "test"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  }
 }
