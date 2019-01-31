@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "test": "./node_modules/.bin/mochA"
+    "test": "./node_modules/.bin/mocha"
   },
   "author": "Tamino Huxohl",
   "license": "GPL-3.0-only",
