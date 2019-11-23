@@ -16,7 +16,7 @@
     "actions-on-google": "^2.2.0",
     "body-parser": "^1.18.3",
     "connect-ensure-login": "^0.1.1",
-    "connect-pg-simple": "^5.0.0",
+    "connect-pg-simple": "^6.0.1",
     "cookie-parser": "^1.4.3",
     "ejs": "^2.6.1",
     "errorhandler": "^1.5.0",
