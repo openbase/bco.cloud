@@ -211,6 +211,7 @@ app.post('/fulfillment',
                 response.status(400).send("The requested client is currently not connected");
             } else {
                 socketUtils.getSocketByBCOId(bcoId).send(JSON.stringify(request.body), (data) => {
+                    console.log('Received response from BCO: ' + data)
                     response.set('Content-Type', 'application/json');
                     response.send(data);
                 });
